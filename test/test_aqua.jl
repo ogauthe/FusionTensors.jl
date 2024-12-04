@@ -11,6 +11,9 @@ using Test: @testset
   Aqua.test_deps_compat(FusionTensors)
   Aqua.test_piracies(FusionTensors)
   Aqua.test_persistent_tasks(FusionTensors)
-  #Aqua.test_deps_compat(testtarget)
+
+  # TODO fix test_stale_deps
+  # TODO replace with Aqua.test_all
+  # Aqua.test_stale_deps(FusionTensors)
 end
 end
