@@ -13,6 +13,7 @@ using GradedArrays:
   gradedrange,
   isdual,
   map_sectors,
+  sector_multiplicity,
   sector_type,
   sectormergesort,
   sectors,
@@ -59,7 +60,7 @@ matrix_row_axis(ft::FusionTensor) = first(axes(data_matrix(ft)))
 matrix_column_axis(ft::FusionTensor) = last(axes(data_matrix(ft)))
 function charge_block_size(ft::FusionTensor, f1::SectorFusionTree, f2::SectorFusionTree)
   b = Tuple(findblock(ft, f1, f2))
-  return ntuple(i -> Int(length(axes(ft)[i][b[i]])), ndims(ft))
+  return ntuple(i -> Int(sector_multiplicity(axes(ft)[i][b[i]])), ndims(ft))
 end
 
 # GradedArrays interface
@@ -83,7 +84,7 @@ function find_sector_block(s::AbstractSector, l::AbstractGradedUnitRange)
 end
 
 function sanitize_axes(raw_legs::Tuple{Vararg{AbstractGradedUnitRange}})
-  legs = promote_sectors(typeof(first(raw_legs)), raw_legs)
+  legs = promote_sectors(raw_legs)
   @assert all(check_unique_sectors.(legs))
   return legs
 end
@@ -97,20 +98,13 @@ function check_unique_sectors(g::AbstractGradedUnitRange)
   return length(unique(sectors(g))) == blocklength(g)
 end
 
-function promote_sectors(
-  ::Type{<:AbstractGradedUnitRange{LA}}, legs::Tuple{Vararg{AbstractGradedUnitRange{LA}}}
-) where {LA}  # nothing to do
-  return legs
-end
-
-function promote_sectors(
-  ::Type{<:AbstractGradedUnitRange}, legs::Tuple{Vararg{AbstractGradedUnitRange}}
-)
+promote_sectors(legs::NTuple{<:Any,<:AbstractGradedUnitRange}) = legs # nothing to do
+function promote_sectors(legs)
   T = promote_sector_type(legs)
   # fuse with trivial to insert all missing arguments inside each GradedAxis
   # avoid depending on GradedArrays internals
   s0 = trivial(T)
-  return map_sectors.(s -> only(sectors(tensor_product(s0, s))), legs)
+  return map_sectors.(s -> only(sectors(to_gradedrange(tensor_product(s0, s)))), legs)
 end
 
 function promote_sector_type(legs)
@@ -151,7 +145,6 @@ end
 # empty matrix
 function FusionTensor(elt::Type, raw_legs::BlockedTuple{2})
   S, legs = sanitize_axes(raw_legs)
-
   row_axis, codomain_trees_to_ranges = fuse_axes(S, first(blocks(legs)))
   col_axis, domain_trees_to_ranges = flip_domain(fuse_axes(S, dual.(last(blocks(legs))))...)
 
@@ -183,7 +176,7 @@ end
 
 function block_fusion_trees_external_multiplicities(it::Tuple{Vararg{AbstractUnitRange}})
   block_sectors = only.(sectors.(it))
-  block_mult = prod(length.(it))
+  block_mult = prod(sector_multiplicity.(it))
   return build_trees(block_sectors, isdual.(it)) .=> block_mult
 end
 

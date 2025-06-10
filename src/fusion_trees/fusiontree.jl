@@ -243,7 +243,9 @@ function fuse_next_sector(
   parent_tree::SectorFusionTree, branch_sector::AbstractSector, level_arrow::Bool
 )
   new_space = to_gradedrange(root_sector(parent_tree) ⊗ branch_sector)
-  return mapreduce(vcat, zip(sectors(new_space), blocklengths(new_space))) do (la, n)
+  return mapreduce(
+    vcat, zip(sectors(new_space), sector_multiplicities(new_space))
+  ) do (la, n)
     return [
       append_tree_leave(parent_tree, branch_sector, level_arrow, la, outer_mult) for
       outer_mult in 1:n

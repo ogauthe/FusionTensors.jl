@@ -44,8 +44,8 @@ function check_sanity(ft::FusionTensor)
   @assert ndims(m) == 2 "invalid data_matrix ndims"
   row_axis = matrix_row_axis(ft)
   column_axis = matrix_column_axis(ft)
-  @assert row_axis === axes(m, 1) "invalid row_axis"
-  @assert column_axis === axes(m, 2) "invalid column_axis"
+  @assert space_isequal(row_axis, axes(m, 1)) "invalid row_axis"
+  @assert space_isequal(column_axis, axes(m, 2)) "invalid column_axis"
   check_data_matrix_axes(m, codomain_axes(ft), domain_axes(ft))
 
   for b in eachblockstoredindex(m)

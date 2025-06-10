@@ -20,7 +20,6 @@ using GradedArrays:
   SectorProduct,
   TrivialSector,
   Z,
-  blockmergesort,
   dual,
   flip,
   gradedrange,
