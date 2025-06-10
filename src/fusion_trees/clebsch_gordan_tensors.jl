@@ -5,17 +5,18 @@
 using HalfIntegers: half
 using WignerSymbols: clebschgordan
 
-using GradedArrays: dual
-using GradedArrays.SymmetrySectors:
+using GradedArrays:
   AbelianStyle,
   AbstractSector,
   NotAbelianStyle,
-  SymmetryStyle,
   O2,
   SU,
+  SymmetryStyle,
+  dual,
   istrivial,
   quantum_dimension,
   sector_label,
+  sectors,
   trivial,
   zero_odd
 using TensorAlgebra: contract
@@ -66,7 +67,7 @@ function clebsch_gordan_tensor(s1::O2, s2::O2, s3::O2)
   d2 = quantum_dimension(s2)
   d3 = quantum_dimension(s3)
   cgt = zeros((d1, d2, d3))
-  s3 ∉ blocklabels(s1 ⊗ s2) && return cgt
+  s3 ∉ sectors(s1 ⊗ s2) && return cgt
 
   # adapted from TensorKit
   l1 = sector_label(s1)

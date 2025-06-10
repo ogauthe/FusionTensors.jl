@@ -14,8 +14,18 @@ using FusionTensors:
   matrix_size,
   ndims_domain,
   ndims_codomain
-using GradedArrays: blockmergesort, dual, flip, gradedrange, sector_type, space_isequal
-using GradedArrays.SymmetrySectors: U1, SU2, SectorProduct, TrivialSector, Z
+using GradedArrays:
+  U1,
+  SU2,
+  SectorProduct,
+  TrivialSector,
+  Z,
+  blockmergesort,
+  dual,
+  flip,
+  gradedrange,
+  sector_type,
+  space_isequal
 using TensorAlgebra: tuplemortar
 using TensorProducts: tensor_product
 

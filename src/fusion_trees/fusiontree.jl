@@ -3,14 +3,18 @@
 # TBD
 # compatibility with TensorKit conventions?
 
-using GradedArrays: GradedArrays, AbstractGradedUnitRange, flip, isdual, sector_type
-using GradedArrays.SymmetrySectors:
+using GradedArrays:
+  GradedArrays,
   ×,
+  AbstractGradedUnitRange,
   AbstractSector,
   SectorProduct,
-  SymmetrySectors,
   arguments,
+  flip,
+  isdual,
   nsymbol,
+  sector_type,
+  sectors,
   to_gradedrange,
   trivial
 using TensorAlgebra: flatten_tuples
@@ -41,7 +45,7 @@ using TensorProducts: ⊗
 #
 #
 # The interface uses AbstractGradedArrays as input for interface simplicity
-# however only blocklabels are used and blocklengths are never read.
+# however only sectors are used and blocklengths are never read.
 
 struct SectorFusionTree{S,N,M}
   leaves::NTuple{N,S}  # TBD rename outer_sectors or leave_sectors?
@@ -98,8 +102,7 @@ function GradedArrays.flip(f::SectorFusionTree)
   )
 end
 
-# SymmetrySectors interface
-function SymmetrySectors.:×(f1::SectorFusionTree, f2::SectorFusionTree)
+function GradedArrays.:×(f1::SectorFusionTree, f2::SectorFusionTree)
   @assert arrows(f1) == arrows(f2)
   product_leaves = .×(leaves(f1), leaves(f2))
   product_root_sector = root_sector(f1) × root_sector(f2)
@@ -120,7 +123,7 @@ function SymmetrySectors.:×(f1::SectorFusionTree, f2::SectorFusionTree)
   )
 end
 
-function SymmetrySectors.arguments(f::SectorFusionTree{<:SectorProduct})
+function GradedArrays.arguments(f::SectorFusionTree{<:SectorProduct})
   transposed_indices = outer_multiplicity_split.(
     Base.tail(leaves(f)),
     branch_sectors(f),
@@ -144,11 +147,11 @@ function SymmetrySectors.arguments(f::SectorFusionTree{<:SectorProduct})
   )
 end
 
-function SymmetrySectors.arguments(f::SectorFusionTree{<:SectorProduct,0})
+function GradedArrays.arguments(f::SectorFusionTree{<:SectorProduct,0})
   return map(arg -> SectorFusionTree((), (), arg, (), ()), arguments(root_sector(f)))
 end
 
-function SymmetrySectors.arguments(f::SectorFusionTree{<:SectorProduct,1})
+function GradedArrays.arguments(f::SectorFusionTree{<:SectorProduct,1})
   arguments_root = arguments(root_sector(f))
   arguments_leave = arguments(only(leaves(f)))
   # use map(keys) to stay agnostic with respect to SectorProduct implementation
@@ -164,7 +167,7 @@ fusiontree_eltype(::Type{<:AbstractSector}) = Float64
 function build_trees(legs::Vararg{AbstractGradedUnitRange})
   # construct all authorized trees for each outer block in legs
   tree_arrows = isdual.(legs)
-  return mapreduce(vcat, Iterators.product(blocklabels.(legs)...)) do it
+  return mapreduce(vcat, Iterators.product(sectors.(legs)...)) do it
     return build_trees(it, tree_arrows)
   end
 end
@@ -240,7 +243,7 @@ function fuse_next_sector(
   parent_tree::SectorFusionTree, branch_sector::AbstractSector, level_arrow::Bool
 )
   new_space = to_gradedrange(root_sector(parent_tree) ⊗ branch_sector)
-  return mapreduce(vcat, zip(blocklabels(new_space), blocklengths(new_space))) do (la, n)
+  return mapreduce(vcat, zip(sectors(new_space), blocklengths(new_space))) do (la, n)
     return [
       append_tree_leave(parent_tree, branch_sector, level_arrow, la, outer_mult) for
       outer_mult in 1:n

@@ -12,7 +12,7 @@ using FusionTensors:
   matrix_row_axis,
   ndims_codomain,
   ndims_domain
-using GradedArrays: blocklabels, dual, space_isequal
+using GradedArrays: dual, sectors, space_isequal
 
 function check_data_matrix_axes(
   mat::BlockSparseMatrix, codomain_legs::Tuple, domain_legs::Tuple
@@ -50,7 +50,7 @@ function check_sanity(ft::FusionTensor)
 
   for b in eachblockstoredindex(m)
     ir, ic = Int.(Tuple(b))
-    @assert blocklabels(row_axis)[ir] == blocklabels(dual(column_axis))[ic] "forbidden block"
+    @assert sectors(row_axis)[ir] == sectors(dual(column_axis))[ic] "forbidden block"
   end
   return nothing
 end

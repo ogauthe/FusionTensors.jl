@@ -6,16 +6,17 @@ using BlockSparseArrays:
   AbstractBlockSparseMatrix, BlockSparseArray, eachblockstoredindex, to_block_indices
 using GradedArrays:
   AbstractGradedUnitRange,
-  blocklabels,
-  blockmergesort,
+  SectorProduct,
+  TrivialSector,
   dual,
   flip,
   gradedrange,
   isdual,
-  map_blocklabels,
+  map_sectors,
   sector_type,
+  sectormergesort,
+  sectors,
   space_isequal
-using GradedArrays.SymmetrySectors: SectorProduct, TrivialSector
 using TensorAlgebra: BlockedTuple, tuplemortar
 using TensorProducts: tensor_product
 
@@ -78,12 +79,12 @@ function BlockArrays.findblock(ft::FusionTensor, f1::SectorFusionTree, f2::Secto
 end
 # TBD move to GradedArrays? rename findfirst_sector?
 function find_sector_block(s::AbstractSector, l::AbstractGradedUnitRange)
-  return findfirst(==(s), blocklabels(l))
+  return findfirst(==(s), sectors(l))
 end
 
 function sanitize_axes(raw_legs::Tuple{Vararg{AbstractGradedUnitRange}})
   legs = promote_sectors(typeof(first(raw_legs)), raw_legs)
-  @assert all(check_unique_blocklabels.(legs))
+  @assert all(check_unique_sectors.(legs))
   return legs
 end
 sanitize_axes(legs::BlockedTuple{2,(0, 0)}) = TrivialSector, legs
@@ -92,8 +93,8 @@ function sanitize_axes(raw_legs::BlockedTuple{2})
   return sector_type(first(flat_legs)), BlockedTuple(flat_legs, Val(blocklengths(raw_legs)))
 end
 
-function check_unique_blocklabels(g::AbstractGradedUnitRange)
-  return length(unique(blocklabels(g))) == blocklength(g)
+function check_unique_sectors(g::AbstractGradedUnitRange)
+  return length(unique(sectors(g))) == blocklength(g)
 end
 
 function promote_sectors(
@@ -107,14 +108,14 @@ function promote_sectors(
 )
   T = promote_sector_type(legs)
   # fuse with trivial to insert all missing arguments inside each GradedAxis
-  # avoid depending on SymmetrySectors internals
+  # avoid depending on GradedArrays internals
   s0 = trivial(T)
-  return map_blocklabels.(s -> only(blocklabels(tensor_product(s0, s))), legs)
+  return map_sectors.(s -> only(sectors(tensor_product(s0, s))), legs)
 end
 
 function promote_sector_type(legs)
   # fuse trivial sectors to produce unified type
-  # avoid depending on SymmetrySectors internals
+  # avoid depending on GradedArrays internals
   return sector_type(tensor_product(trivial.(legs)...))
 end
 
@@ -181,17 +182,17 @@ function fusion_trees_external_multiplicities(
 end
 
 function block_fusion_trees_external_multiplicities(it::Tuple{Vararg{AbstractUnitRange}})
-  block_sectors = only.(blocklabels.(it))
+  block_sectors = only.(sectors.(it))
   block_mult = prod(length.(it))
   return build_trees(block_sectors, isdual.(it)) .=> block_mult
 end
 
 function compute_inner_ranges(fusion_trees_mult)
-  fused_leg = blockmergesort(
+  fused_leg = sectormergesort(
     gradedrange(root_sector.(first.(fusion_trees_mult)) .=> last.(fusion_trees_mult))
   )
   range_mapping = Dict{fieldtype(eltype(fusion_trees_mult), 1),typeof(Block(1)[1:1])}()
-  fused_sectors = blocklabels(fused_leg)
+  fused_sectors = sectors(fused_leg)
   shifts = ones(Int, blocklength(fused_leg))
   for (f, m) in fusion_trees_mult
     s = root_sector(f)
@@ -236,8 +237,8 @@ function initialize_data_matrix(
 end
 
 function initialize_allowed_sectors!(mat::AbstractMatrix)
-  row_sectors = blocklabels(axes(mat, 1))
-  col_sectors = blocklabels(dual(axes(mat, 2)))
+  row_sectors = sectors(axes(mat, 1))
+  col_sectors = sectors(dual(axes(mat, 2)))
   row_block_indices = findall(in(col_sectors), row_sectors)
   col_block_indices = findall(in(row_sectors), col_sectors)
   for rc in zip(row_block_indices, col_block_indices)
