@@ -36,7 +36,7 @@ end
 
 function LinearAlgebra.norm(ft::FusionTensor)
   m = data_matrix(ft)
-  row_sectors = sectors(domain_axis(ft))
+  row_sectors = sectors(codomain_axis(ft))
   n2 = sum(eachblockstoredindex(m); init=zero(real(eltype(ft)))) do b
     return quantum_dimension(row_sectors[Int(first(Tuple(b)))]) * norm(m[b])^2
   end
@@ -45,7 +45,7 @@ end
 
 function LinearAlgebra.tr(ft::FusionTensor)
   m = data_matrix(ft)
-  row_sectors = sectors(domain_axis(ft))
+  row_sectors = sectors(codomain_axis(ft))
   return sum(eachblockstoredindex(m); init=zero(eltype(ft))) do b
     return quantum_dimension(row_sectors[Int(first(Tuple(b)))]) * tr(m[b])
   end

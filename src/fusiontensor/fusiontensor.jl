@@ -10,6 +10,7 @@ using GradedArrays:
   TrivialSector,
   dual,
   flip,
+  flip_dual,
   gradedrange,
   isdual,
   map_sectors,
@@ -97,8 +98,8 @@ function BlockArrays.findblock(ft::FusionTensor, f1::SectorFusionTree, f2::Secto
   return Block(b1..., b2...)
 end
 # TBD move to GradedArrays? rename findfirst_sector?
-function find_sector_block(s::AbstractSector, l::AbstractGradedUnitRange)
-  return findfirst(==(s), sectors(l))
+function find_sector_block(s::AbstractSector, g::AbstractGradedUnitRange)
+  return findfirst(==(s), sectors(flip_dual(g)))
 end
 
 function sanitize_axes(raw_legs::Tuple{Vararg{AbstractGradedUnitRange}})

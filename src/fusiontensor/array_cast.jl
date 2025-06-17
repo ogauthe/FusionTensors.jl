@@ -19,11 +19,13 @@ end
 function to_fusiontensor(
   array::AbstractArray,
   codomain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
-  domain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
+  domain_legs::Tuple{Vararg{AbstractGradedUnitRange}};
+  atol::Real=0,
+  rtol::Real=rtoldefault(array),
 )
   bounds = blocklengths.((codomain_legs..., domain_legs...))
   blockarray = BlockedArray(array, bounds...)
-  return to_fusiontensor(blockarray, codomain_legs, domain_legs)
+  return to_fusiontensor(blockarray, codomain_legs, domain_legs; atol, rtol)
 end
 
 rtoldefault(a::AbstractArray) = rtoldefault(eltype(a))
