@@ -21,28 +21,33 @@ using GradedArrays:
 using TensorAlgebra: BlockedTuple, tuplemortar
 using TensorProducts: tensor_product
 
-struct FusionTensor{T,N,Axes,Mat,Mapping} <: AbstractArray{T,N}
+struct FusionTensor{T,N,Axes,Mat<:AbstractMatrix{T},Mapping} <: AbstractArray{T,N}
   data_matrix::Mat
   axes::Axes
   trees_block_mapping::Mapping
 
   # inner constructor to impose constraints on types
-  function FusionTensor(
-    mat::AbstractMatrix,
-    legs::BlockedTuple{2,<:Any,<:Tuple{Vararg{AbstractGradedUnitRange}}},
-    trees_block_mapping::Dict,
-  )
-    S = sector_type(axes(mat, 1))
-    @assert sector_type(axes(mat, 2)) === S
+  function FusionTensor{T,N,Axes,Mat,Mapping}(
+    mat, legs, trees_block_mapping
+  ) where {T,N,Axes,Mat,Mapping}
+    S = isempty(legs) ? TrivialSector : sector_type(first(legs))
     @assert keytype(trees_block_mapping) <:
       Tuple{<:SectorFusionTree{S},<:SectorFusionTree{S}}
     @assert all(sector_type.(Tuple(legs)) .=== S)
-    return new{
-      eltype(mat),length(legs),typeof(legs),typeof(mat),typeof(trees_block_mapping)
-    }(
-      mat, legs, trees_block_mapping
-    )
+    return new{T,N,Axes,Mat,Mapping}(mat, legs, trees_block_mapping)
   end
+end
+
+function FusionTensor(
+  mat::AbstractMatrix,
+  legs::BlockedTuple{2,<:Any,<:Tuple{Vararg{AbstractGradedUnitRange}}},
+  trees_block_mapping::Dict{<:Tuple{<:SectorFusionTree,<:SectorFusionTree}},
+)
+  return FusionTensor{
+    eltype(mat),length(legs),typeof(legs),typeof(mat),typeof(trees_block_mapping)
+  }(
+    mat, legs, trees_block_mapping
+  )
 end
 
 # getters
