@@ -8,23 +8,11 @@ using FusionTensors:
   domain_axes,
   checkaxes,
   checkaxes_dual,
-  matrix_column_axis,
-  matrix_row_axis,
+  domain_axis,
+  codomain_axis,
   ndims_codomain,
   ndims_domain
-using GradedArrays: dual, sectors, space_isequal
-
-function check_data_matrix_axes(
-  mat::BlockSparseMatrix, codomain_legs::Tuple, domain_legs::Tuple
-)
-  ft0 = FusionTensor(Float64, codomain_legs, domain_legs)
-  @assert space_isequal(matrix_row_axis(ft0), axes(mat, 1))
-  @assert space_isequal(matrix_column_axis(ft0), axes(mat, 2))
-end
-
-function check_data_matrix_axes(mat::Adjoint, codomain_legs::Tuple, domain_legs::Tuple)
-  return check_data_matrix_axes(adjoint(mat), dual.(domain_legs), dual.(codomain_legs))
-end
+using GradedArrays: dual, sectors, sector_multiplicities, space_isequal
 
 function check_sanity(ft::FusionTensor)
   nca = ndims_domain(ft)
@@ -42,11 +30,10 @@ function check_sanity(ft::FusionTensor)
 
   m = data_matrix(ft)
   @assert ndims(m) == 2 "invalid data_matrix ndims"
-  row_axis = matrix_row_axis(ft)
-  column_axis = matrix_column_axis(ft)
-  @assert space_isequal(row_axis, axes(m, 1)) "invalid row_axis"
-  @assert space_isequal(column_axis, axes(m, 2)) "invalid column_axis"
-  check_data_matrix_axes(m, codomain_axes(ft), domain_axes(ft))
+  row_axis = codomain_axis(ft)
+  column_axis = domain_axis(ft)
+  @assert sector_multiplicities(row_axis) == blocklengths(axes(m, 1)) "invalid row_axis"
+  @assert sector_multiplicities(column_axis) == blocklengths(axes(m, 2)) "invalid column_axis"
 
   for b in eachblockstoredindex(m)
     ir, ic = Int.(Tuple(b))

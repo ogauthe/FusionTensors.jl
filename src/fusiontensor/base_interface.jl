@@ -87,8 +87,7 @@ function Base.similar(ft::FusionTensor, T::Type)
 
   # some fusion trees have Float64 eltype: need compatible type
   @assert promote_type(T, fusiontree_eltype(sector_type(ft))) === T
-  mat = similar(data_matrix(ft), T)
-  initialize_allowed_sectors!(mat)
+  mat = initialize_data_matrix(T, codomain_axis(ft), domain_axis(ft))
   return FusionTensor(mat, axes(ft), trees_block_mapping(ft))
 end
 

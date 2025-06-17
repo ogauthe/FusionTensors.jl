@@ -4,8 +4,8 @@ using FusionTensors:
   FusionTensor,
   data_matrix,
   checkaxes,
-  matrix_column_axis,
-  matrix_row_axis,
+  codomain_axis,
+  domain_axis,
   naive_permutedims,
   ndims_domain,
   ndims_codomain,
@@ -45,8 +45,8 @@ include("setup.jl")
 
       ft4 = permutedims(ft3, (2, 3), (4, 1))
       @test checkaxes(axes(ft1), axes(ft4))
-      @test space_isequal(matrix_column_axis(ft1), matrix_column_axis(ft4))
-      @test space_isequal(matrix_row_axis(ft1), matrix_row_axis(ft4))
+      @test space_isequal(codomain_axis(ft1), codomain_axis(ft4))
+      @test space_isequal(domain_axis(ft1), domain_axis(ft4))
       @test ft4 ≈ ft1
     end
   end

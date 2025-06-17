@@ -20,6 +20,7 @@ using GradedArrays:
   space_isequal
 using TensorAlgebra: BlockedTuple, tuplemortar
 using TensorProducts: tensor_product
+using TypeParameterAccessors: type_parameters
 
 struct FusionTensor{T,N,Axes,Mat<:AbstractMatrix{T},Mapping} <: AbstractArray{T,N}
   data_matrix::Mat
@@ -55,14 +56,26 @@ data_matrix(ft::FusionTensor) = ft.data_matrix
 trees_block_mapping(ft::FusionTensor) = ft.trees_block_mapping
 
 # misc access
-codomain_axes(ft::FusionTensor) = first(blocks(axes(ft)))
-domain_axes(ft::FusionTensor) = last(blocks(axes(ft)))
+codomain_axes(ft::FusionTensor) = axes(ft)[Block(1)]
+domain_axes(ft::FusionTensor) = axes(ft)[Block(2)]
 ndims_codomain(ft::FusionTensor) = length(codomain_axes(ft))
 ndims_domain(ft::FusionTensor) = length(domain_axes(ft))
 
-matrix_size(ft::FusionTensor) = quantum_dimension.(axes(data_matrix(ft)))
-matrix_row_axis(ft::FusionTensor) = first(axes(data_matrix(ft)))
-matrix_column_axis(ft::FusionTensor) = last(axes(data_matrix(ft)))
+dummy_axis(ft::FusionTensor) = dummy_axis(sector_type(ft))
+dummy_axis(::Type{S}) where {S<:AbstractSector} = gradedrange([trivial(S) => 1])
+
+function codomain_axis(ft::FusionTensor)
+  if ndims_codomain(ft) == 0
+    return dummy_axis(ft)
+  end
+  return ⊗(codomain_axes(ft)...)
+end
+function domain_axis(ft::FusionTensor)
+  if ndims_domain(ft) == 0
+    return dummy_axis(ft)
+  end
+  return dual(⊗(dual.(domain_axes(ft))...))
+end
 function charge_block_size(ft::FusionTensor, f1::SectorFusionTree, f2::SectorFusionTree)
   b = Tuple(findblock(ft, f1, f2))
   return ntuple(i -> Int(sector_multiplicity(axes(ft)[i][b[i]])), ndims(ft))
@@ -130,8 +143,6 @@ end
 function FusionTensor(mat::AbstractMatrix, legs::BlockedTuple{2})
   # init with empty data_matrix to construct trees_block_mapping
   ft = FusionTensor(eltype(mat), legs)
-  @assert space_isequal(matrix_row_axis(ft), axes(mat, 1))
-  @assert space_isequal(matrix_column_axis(ft), axes(mat, 2))
   for b in eachblockstoredindex(mat)
     @assert b in eachblockstoredindex(data_matrix(ft))  # check matrix block is allowed
     data_matrix(ft)[b] = mat[b]
@@ -150,8 +161,8 @@ end
 # empty matrix
 function FusionTensor(elt::Type, raw_legs::BlockedTuple{2})
   S, legs = sanitize_axes(raw_legs)
-  row_axis, codomain_trees_to_ranges = fuse_axes(S, first(blocks(legs)))
-  col_axis, domain_trees_to_ranges = flip_domain(fuse_axes(S, dual.(last(blocks(legs))))...)
+  row_axis, codomain_trees_to_ranges = fuse_axes(S, legs[Block(1)])
+  col_axis, domain_trees_to_ranges = flip_domain(fuse_axes(S, dual.(legs[Block(2)]))...)
 
   mat = initialize_data_matrix(elt, row_axis, col_axis)
   tree_to_block_mapping = intersect_codomain_domain(
@@ -180,7 +191,7 @@ function fusion_trees_external_multiplicities(
 end
 
 function block_fusion_trees_external_multiplicities(it::Tuple{Vararg{AbstractUnitRange}})
-  block_sectors = only.(sectors.(it))
+  block_sectors = only.(sectors.(flip_dual.(it)))
   block_mult = prod(sector_multiplicity.(it))
   return build_trees(block_sectors, isdual.(it)) .=> block_mult
 end
@@ -189,7 +200,7 @@ function compute_inner_ranges(fusion_trees_mult)
   fused_leg = sectormergesort(
     gradedrange(root_sector.(first.(fusion_trees_mult)) .=> last.(fusion_trees_mult))
   )
-  range_mapping = Dict{fieldtype(eltype(fusion_trees_mult), 1),typeof(Block(1)[1:1])}()
+  range_mapping = Dict{type_parameters(eltype(fusion_trees_mult), 1),typeof(Block(1)[1:1])}()
   fused_sectors = sectors(fused_leg)
   shifts = ones(Int, blocklength(fused_leg))
   for (f, m) in fusion_trees_mult
@@ -224,24 +235,25 @@ end
 
 function initialize_data_matrix(
   elt::Type{<:Number},
-  mat_row_axis::AbstractGradedUnitRange,
-  mat_col_axis::AbstractGradedUnitRange,
+  codomain_axis::AbstractGradedUnitRange,
+  domain_axis::AbstractGradedUnitRange,
 )
+  @assert sector_type(codomain_axis) == sector_type(domain_axis)
   # non-abelian fusion trees have float eltype: need compatible type
-  promoted = promote_type(elt, fusiontree_eltype(sector_type(mat_row_axis)))
-  mat = BlockSparseArray{promoted}(undef, mat_row_axis, mat_col_axis)
-  initialize_allowed_sectors!(mat)
-  return mat
-end
-
-function initialize_allowed_sectors!(mat::AbstractMatrix)
-  row_sectors = sectors(axes(mat, 1))
-  col_sectors = sectors(dual(axes(mat, 2)))
+  promoted = promote_type(elt, fusiontree_eltype(sector_type(domain_axis)))
+  mat = BlockSparseArray{promoted}(
+    undef,
+    blockedrange(sector_multiplicities(codomain_axis)),
+    blockedrange(sector_multiplicities(domain_axis)),
+  )
+  row_sectors = sectors(codomain_axis)
+  col_sectors = sectors(domain_axis)
   row_block_indices = findall(in(col_sectors), row_sectors)
   col_block_indices = findall(in(row_sectors), col_sectors)
   for rc in zip(row_block_indices, col_block_indices)
     mat[Block(rc)] = mat[Block(rc)]
   end
+  return mat
 end
 
 checkaxes_dual(axes1, axes2) = checkaxes(axes1, dual.(axes2))
