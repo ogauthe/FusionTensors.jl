@@ -94,6 +94,30 @@ end
 end
 
 @testset "SU(3) SectorFusionTree" begin
+  # convention: irreps are already dualed if needed, arrows do not affect them. They only
+  # affect the basis on which the tree projects for self-dual irreps.
+  f3 = SU{3}((1, 0))
+  c3 = dual(f3)
+
+  trees = build_trees((f3, f3), (false, false))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, f3), (true, false))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, f3), (false, true))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, f3), (true, true))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, c3), (false, false))
+  @test root_sector.(trees) == [SU{3}((0, 0)), SU{3}((2, 1))]
+
+  trees = build_trees((c3, c3), (false, false))
+  @test root_sector.(trees) == [SU{3}((1, 0)), SU{3}((2, 2))]
+
+  # test outer outer_multiplicity > 1
   a8 = SU{3}((2, 1))
   trees = build_trees((a8, a8), (false, false))
   @test length(trees) == 6
