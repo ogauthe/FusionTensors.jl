@@ -13,6 +13,7 @@ using GradedArrays:
   flip,
   isdual,
   nsymbol,
+  sector_multiplicities,
   sector_type,
   sectors,
   to_gradedrange,
