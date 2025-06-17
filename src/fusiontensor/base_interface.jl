@@ -17,8 +17,6 @@ function Base.:*(left::FusionTensor, right::FusionTensor)
   return FusionTensor(new_data_matrix, codomain_axes(left), domain_axes(right))
 end
 
-Base.:+(ft::FusionTensor) = ft
-
 # tensor addition is a block data_matrix add.
 function Base.:+(left::FusionTensor, right::FusionTensor)
   checkaxes(axes(left), axes(right))
@@ -94,23 +92,21 @@ function Base.similar(ft::FusionTensor, T::Type)
   return FusionTensor(mat, axes(ft), trees_block_mapping(ft))
 end
 
-# trigger explicit error in TensorAlgebra.contract
-# TBD impose some convention? Remove?
 function Base.similar(
-  ft::FusionTensor,
-  T::Type,
-  new_axes::Tuple{AbstractGradedUnitRange,Vararg{AbstractGradedUnitRange}},
+  ::FusionTensor, ::Type, t::Tuple{AbstractUnitRange,Vararg{AbstractUnitRange}}
 )
-  throw(DimensionMismatch("Need bituple of axes"))
+  throw(MethodError(similar, (typeof(t),)))
 end
-function Base.similar(ft::FusionTensor, T::Type, new_axes::Tuple{})
-  throw(DimensionMismatch("Need bituple of axes"))
+function Base.similar(::FusionTensor, ::Type, ::Tuple{})
+  throw(MethodError(similar, (Tuple{},)))
 end
 
-function Base.similar(ft::FusionTensor, T::Type, new_axes::Tuple{<:Tuple,<:Tuple})
+function Base.similar(
+  ft::FusionTensor, ::Type{T}, new_axes::Tuple{<:Tuple,<:Tuple}
+) where {T}
   return similar(ft, T, tuplemortar(new_axes))
 end
-function Base.similar(::FusionTensor, T::Type, new_axes::BlockedTuple{2})
+function Base.similar(::FusionTensor, ::Type{T}, new_axes::BlockedTuple{2}) where {T}
   return FusionTensor(T, new_axes)
 end
 
