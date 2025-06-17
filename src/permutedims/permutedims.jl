@@ -29,7 +29,7 @@ function fusiontensor_permutedims(
 end
 
 function fusiontensor_permutedims(ft, biperm::BlockedPermutation{2})
-  @assert ndims(ft) == length(biperm)
+  ndims(ft) == length(biperm) || throw(ArgumentError("Invalid permutation length"))
 
   # early return for identity operation. Do not copy. Also handle tricky 0-dim case.
   if ndims_codomain(ft) == first(blocklengths(biperm))  # compile time

@@ -1,4 +1,4 @@
-using Test: @test, @testset, @test_broken
+using Test: @test, @testset, @test_broken, @test_throws
 
 using FusionTensors:
   FusionTensor,
@@ -48,6 +48,9 @@ include("setup.jl")
       @test space_isequal(codomain_axis(ft1), codomain_axis(ft4))
       @test space_isequal(domain_axis(ft1), domain_axis(ft4))
       @test ft4 ≈ ft1
+
+      @test_throws MethodError permutedims(ft1, (2, 3, 4, 1))
+      @test_throws ArgumentError permutedims(ft1, (2, 3), (5, 4, 1))
     end
   end
 

@@ -61,7 +61,9 @@ end
   @test isnothing(check_sanity(ft6))
   @test ft4 ≈ ft6
 
-  @test_broken permutedims(ft1, (), (1, 2, 3, 4)) * permutedims(ft3, (3, 4, 1, 2), ()) isa
+  @test permutedims(ft1, (), (1, 2, 3, 4)) * permutedims(ft3, (3, 4, 1, 2), ()) isa
     FusionTensor{Float64,0}
-  @test_broken contract(ft1, (1, 2, 3, 4), ft3, (3, 4, 1, 2)) isa Any
+  ft7, legs = contract(ft1, (1, 2, 3, 4), ft3, (3, 4, 1, 2))
+  @test legs == tuplemortar(((), ()))
+  @test ft7 isa FusionTensor{Float64,0}
 end

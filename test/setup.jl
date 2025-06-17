@@ -1,5 +1,5 @@
 using LinearAlgebra: Adjoint
-
+using BlockArrays: blocklengths
 using BlockSparseArrays: BlockSparseMatrix, eachblockstoredindex
 using FusionTensors:
   FusionTensor,
