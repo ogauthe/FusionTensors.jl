@@ -5,8 +5,7 @@ using LinearAlgebra: LinearAlgebra, mul!, norm, tr
 using BlockArrays: Block, blocks
 
 using BlockSparseArrays: eachblockstoredindex
-using GradedArrays: blocklabels
-using GradedArrays.SymmetrySectors: quantum_dimension
+using GradedArrays: quantum_dimension, sectors
 
 # allow to contract with different eltype and let BlockSparseArray ensure compatibility
 # impose matching type and number of axes at compile time
@@ -37,7 +36,7 @@ end
 
 function LinearAlgebra.norm(ft::FusionTensor)
   m = data_matrix(ft)
-  row_sectors = blocklabels(matrix_row_axis(ft))
+  row_sectors = sectors(codomain_axis(ft))
   n2 = sum(eachblockstoredindex(m); init=zero(real(eltype(ft)))) do b
     return quantum_dimension(row_sectors[Int(first(Tuple(b)))]) * norm(m[b])^2
   end
@@ -46,7 +45,7 @@ end
 
 function LinearAlgebra.tr(ft::FusionTensor)
   m = data_matrix(ft)
-  row_sectors = blocklabels(matrix_row_axis(ft))
+  row_sectors = sectors(codomain_axis(ft))
   return sum(eachblockstoredindex(m); init=zero(eltype(ft))) do b
     return quantum_dimension(row_sectors[Int(first(Tuple(b)))]) * tr(m[b])
   end

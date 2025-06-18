@@ -3,8 +3,7 @@
 using BlockArrays: AbstractBlockArray, BlockedArray, blockedrange, blocklengths, findblock
 
 using BlockSparseArrays: BlockSparseArrays, BlockSparseArray
-using GradedArrays: AbstractGradedUnitRange, blocklabels
-using GradedArrays.SymmetrySectors: block_dimensions, quantum_dimension
+using GradedArrays: AbstractGradedUnitRange, quantum_dimension
 using TensorAlgebra: contract
 
 # =================================  High level interface  =================================
@@ -20,11 +19,13 @@ end
 function to_fusiontensor(
   array::AbstractArray,
   codomain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
-  domain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
+  domain_legs::Tuple{Vararg{AbstractGradedUnitRange}};
+  atol::Real=0,
+  rtol::Real=rtoldefault(array),
 )
-  bounds = block_dimensions.((codomain_legs..., domain_legs...))
+  bounds = blocklengths.((codomain_legs..., domain_legs...))
   blockarray = BlockedArray(array, bounds...)
-  return to_fusiontensor(blockarray, codomain_legs, domain_legs)
+  return to_fusiontensor(blockarray, codomain_legs, domain_legs; atol, rtol)
 end
 
 rtoldefault(a::AbstractArray) = rtoldefault(eltype(a))
@@ -72,7 +73,7 @@ function to_fusiontensor_no_checknorm(
 end
 
 function to_array(ft::FusionTensor)
-  bounds = block_dimensions.((codomain_axes(ft)..., domain_axes(ft)...))
+  bounds = blocklengths.((codomain_axes(ft)..., domain_axes(ft)...))
   bsa = BlockSparseArray{eltype(ft)}(undef, blockedrange.(bounds))
   for (f1, f2) in keys(trees_block_mapping(ft))
     b = findblock(ft, f1, f2)

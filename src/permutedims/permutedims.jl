@@ -7,12 +7,11 @@ using TensorAlgebra: BlockedPermutation, permmortar, blockpermute
 
 function naive_permutedims(ft, biperm::BlockedPermutation{2})
   @assert ndims(ft) == length(biperm)
-  new_codomain_legs, new_domain_legs = blockpermute(axes(ft), biperm)
 
   # naive permute: cast to dense, permutedims, cast to FusionTensor
   arr = Array(ft)
   permuted_arr = permutedims(arr, Tuple(biperm))
-  permuted = to_fusiontensor(permuted_arr, new_codomain_legs, new_domain_legs)
+  permuted = to_fusiontensor(permuted_arr, blocks(axes(ft)[biperm])...)
   return permuted
 end
 
@@ -30,7 +29,7 @@ function fusiontensor_permutedims(
 end
 
 function fusiontensor_permutedims(ft, biperm::BlockedPermutation{2})
-  @assert ndims(ft) == length(biperm)
+  ndims(ft) == length(biperm) || throw(ArgumentError("Invalid permutation length"))
 
   # early return for identity operation. Do not copy. Also handle tricky 0-dim case.
   if ndims_codomain(ft) == first(blocklengths(biperm))  # compile time
@@ -39,8 +38,7 @@ function fusiontensor_permutedims(ft, biperm::BlockedPermutation{2})
     end
   end
 
-  new_codomain_legs, new_domain_legs = blockpermute(axes(ft), biperm)
-  new_ft = FusionTensor(eltype(ft), new_codomain_legs, new_domain_legs)
+  new_ft = FusionTensor(eltype(ft), axes(ft)[biperm])
   fusiontensor_permutedims!(new_ft, ft, Tuple(biperm))
   return new_ft
 end

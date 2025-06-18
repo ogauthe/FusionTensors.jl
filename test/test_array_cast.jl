@@ -4,8 +4,7 @@ using Test: @test, @test_throws, @testset
 using BlockArrays: Block, BlockedArray, blocksize
 
 using FusionTensors: FusionTensor, data_matrix, to_fusiontensor
-using GradedArrays: dual, gradedrange
-using GradedArrays.SymmetrySectors: O2, SectorProduct, SU2, TrivialSector, U1
+using GradedArrays: O2, SectorProduct, SU2, TrivialSector, U1, dual, gradedrange
 using TensorProducts: tensor_product
 
 include("setup.jl")

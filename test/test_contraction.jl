@@ -3,9 +3,8 @@ using Test: @test, @testset, @test_broken
 
 using BlockSparseArrays: BlockSparseArray
 using FusionTensors: FusionTensor, domain_axes, codomain_axes
-using GradedArrays: dual, gradedrange
-using GradedArrays.SymmetrySectors: U1
-using TensorAlgebra: contract
+using GradedArrays: U1, dual, gradedrange
+using TensorAlgebra: contract, tuplemortar
 
 include("setup.jl")
 
@@ -49,18 +48,22 @@ end
   ft3 = FusionTensor(Float64, dual.((g3, g4)), dual.((g1, g2)))
 
   ft4, legs = contract(ft1, (1, 2, 3, 4), ft2, (3, 4, 5))
-  @test legs == (1, 2, 5)
+  @test legs == tuplemortar(((1, 2), (5,)))
   @test isnothing(check_sanity(ft4))
   @test domain_axes(ft4) === domain_axes(ft2)
   @test codomain_axes(ft4) === codomain_axes(ft1)
 
   ft5 = contract((1, 2, 5), ft1, (1, 2, 3, 4), ft2, (3, 4, 5))
   @test isnothing(check_sanity(ft5))
+  @test ft4 ≈ ft5
 
-  # biperm is not allowed
-  @test_broken contract(((1, 2), (5,)), ft1, (1, 2, 3, 4), ft2, (3, 4, 5))
+  ft6 = contract(tuplemortar(((1, 2), (5,))), ft1, (1, 2, 3, 4), ft2, (3, 4, 5))
+  @test isnothing(check_sanity(ft6))
+  @test ft4 ≈ ft6
 
   @test permutedims(ft1, (), (1, 2, 3, 4)) * permutedims(ft3, (3, 4, 1, 2), ()) isa
     FusionTensor{Float64,0}
-  @test_broken contract(ft1, (1, 2, 3, 4), ft3, (3, 4, 1, 2))
+  ft7, legs = contract(ft1, (1, 2, 3, 4), ft3, (3, 4, 1, 2))
+  @test legs == tuplemortar(((), ()))
+  @test ft7 isa FusionTensor{Float64,0}
 end

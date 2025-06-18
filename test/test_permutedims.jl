@@ -1,17 +1,16 @@
-using Test: @test, @testset, @test_broken
+using Test: @test, @testset, @test_broken, @test_throws
 
 using FusionTensors:
   FusionTensor,
   data_matrix,
   checkaxes,
-  matrix_column_axis,
-  matrix_row_axis,
+  codomain_axis,
+  domain_axis,
   naive_permutedims,
   ndims_domain,
   ndims_codomain,
   to_fusiontensor
-using GradedArrays: dual, gradedrange, space_isequal
-using GradedArrays.SymmetrySectors: O2, U1, SectorProduct, SU2
+using GradedArrays: O2, U1, SectorProduct, SU2, dual, gradedrange, space_isequal
 using TensorAlgebra: permmortar, tuplemortar
 
 include("setup.jl")
@@ -46,9 +45,12 @@ include("setup.jl")
 
       ft4 = permutedims(ft3, (2, 3), (4, 1))
       @test checkaxes(axes(ft1), axes(ft4))
-      @test space_isequal(matrix_column_axis(ft1), matrix_column_axis(ft4))
-      @test space_isequal(matrix_row_axis(ft1), matrix_row_axis(ft4))
+      @test space_isequal(codomain_axis(ft1), codomain_axis(ft4))
+      @test space_isequal(domain_axis(ft1), domain_axis(ft4))
       @test ft4 ≈ ft1
+
+      @test_throws MethodError permutedims(ft1, (2, 3, 4, 1))
+      @test_throws ArgumentError permutedims(ft1, (2, 3), (5, 4, 1))
     end
   end
 

@@ -9,13 +9,21 @@ using FusionTensors:
   FusionTensor,
   checkaxes,
   checkaxes_dual,
-  matrix_column_axis,
-  matrix_row_axis,
-  matrix_size,
+  codomain_axis,
+  domain_axis,
   ndims_domain,
   ndims_codomain
-using GradedArrays: blockmergesort, dual, flip, gradedrange, sector_type, space_isequal
-using GradedArrays.SymmetrySectors: U1, SU2, SectorProduct, TrivialSector, Z
+using GradedArrays:
+  U1,
+  SU2,
+  SectorProduct,
+  TrivialSector,
+  Z,
+  dual,
+  flip,
+  gradedrange,
+  sector_type,
+  space_isequal
 using TensorAlgebra: tuplemortar
 using TensorProducts: tensor_product
 
@@ -28,8 +36,8 @@ include("setup.jl")
   # check dual convention when initializing data_matrix
   ft0 = FusionTensor(Float64, (g1,), (g2,))
   @test ft0 isa FusionTensor
-  @test space_isequal(matrix_row_axis(ft0), g1)
-  @test space_isequal(matrix_column_axis(ft0), g2)
+  @test space_isequal(codomain_axis(ft0), g1)
+  @test space_isequal(domain_axis(ft0), g2)
 
   m = BlockSparseArray{Float64}(undef, g1, g2)
   ft1 = FusionTensor(m, (g1,), (g2,))
@@ -43,9 +51,9 @@ include("setup.jl")
   @test checkaxes(domain_axes(ft1), (g2,))
   @test ndims_codomain(ft1) == 1
   @test ndims_domain(ft1) == 1
-  @test matrix_size(ft1) == (6, 5)
-  @test space_isequal(matrix_row_axis(ft1), g1)
-  @test space_isequal(matrix_column_axis(ft1), g2)
+  @test size(data_matrix(ft1)) == (6, 5)
+  @test space_isequal(codomain_axis(ft1), g1)
+  @test space_isequal(domain_axis(ft1), g2)
   @test isnothing(check_sanity(ft0))
   @test isnothing(check_sanity(ft1))
   @test sector_type(ft1) === U1{Int}
@@ -117,9 +125,9 @@ end
   @test axes(ft) == tuplemortar(((g1, g2), (g3, g4)))
   @test ndims_codomain(ft) == 2
   @test ndims_domain(ft) == 2
-  @test matrix_size(ft) == (30, 12)
-  @test space_isequal(matrix_row_axis(ft), gr)
-  @test space_isequal(matrix_column_axis(ft), gc)
+  @test size(data_matrix(ft)) == (30, 12)
+  @test space_isequal(codomain_axis(ft), gr)
+  @test space_isequal(domain_axis(ft), gc)
   @test isnothing(check_sanity(ft))
 
   @test ndims(ft) == 4
@@ -179,46 +187,46 @@ end
   ft4 = ft3 + ft3
   @test codomain_axes(ft4) === codomain_axes(ft3)
   @test domain_axes(ft4) === domain_axes(ft3)
-  @test space_isequal(matrix_row_axis(ft4), matrix_row_axis(ft3))
-  @test space_isequal(matrix_column_axis(ft4), matrix_column_axis(ft3))
+  @test space_isequal(codomain_axis(ft4), codomain_axis(ft3))
+  @test space_isequal(domain_axis(ft4), domain_axis(ft3))
   @test isnothing(check_sanity(ft4))
 
   ft4 = ft3 - ft3
   @test codomain_axes(ft4) === codomain_axes(ft3)
   @test domain_axes(ft4) === domain_axes(ft3)
-  @test space_isequal(matrix_row_axis(ft4), matrix_row_axis(ft3))
-  @test space_isequal(matrix_column_axis(ft4), matrix_column_axis(ft3))
+  @test space_isequal(codomain_axis(ft4), codomain_axis(ft3))
+  @test space_isequal(domain_axis(ft4), domain_axis(ft3))
   @test isnothing(check_sanity(ft4))
 
   ft4 = 2 * ft3
   @test codomain_axes(ft4) === codomain_axes(ft3)
   @test domain_axes(ft4) === domain_axes(ft3)
-  @test space_isequal(matrix_row_axis(ft4), matrix_row_axis(ft3))
-  @test space_isequal(matrix_column_axis(ft4), matrix_column_axis(ft3))
+  @test space_isequal(codomain_axis(ft4), codomain_axis(ft3))
+  @test space_isequal(domain_axis(ft4), domain_axis(ft3))
   @test isnothing(check_sanity(ft4))
   @test eltype(ft4) == Float64
 
   ft4 = 2.0 * ft3
   @test codomain_axes(ft4) === codomain_axes(ft3)
   @test domain_axes(ft4) === domain_axes(ft3)
-  @test space_isequal(matrix_row_axis(ft4), matrix_row_axis(ft3))
-  @test space_isequal(matrix_column_axis(ft4), matrix_column_axis(ft3))
+  @test space_isequal(codomain_axis(ft4), codomain_axis(ft3))
+  @test space_isequal(domain_axis(ft4), domain_axis(ft3))
   @test isnothing(check_sanity(ft4))
   @test eltype(ft4) == Float64
 
   ft4 = ft3 / 2.0
   @test codomain_axes(ft4) === codomain_axes(ft3)
   @test domain_axes(ft4) === domain_axes(ft3)
-  @test space_isequal(matrix_row_axis(ft4), matrix_row_axis(ft3))
-  @test space_isequal(matrix_column_axis(ft4), matrix_column_axis(ft3))
+  @test space_isequal(codomain_axis(ft4), codomain_axis(ft3))
+  @test space_isequal(domain_axis(ft4), domain_axis(ft3))
   @test isnothing(check_sanity(ft4))
   @test eltype(ft4) == Float64
 
   ft5 = 2.0im * ft3
   @test codomain_axes(ft5) === codomain_axes(ft3)
   @test domain_axes(ft5) === domain_axes(ft3)
-  @test space_isequal(matrix_row_axis(ft5), matrix_row_axis(ft3))
-  @test space_isequal(matrix_column_axis(ft5), matrix_column_axis(ft3))
+  @test space_isequal(codomain_axis(ft5), codomain_axis(ft3))
+  @test space_isequal(domain_axis(ft5), domain_axis(ft3))
   @test isnothing(check_sanity(ft4))
   @test eltype(ft5) == ComplexF64
 
@@ -230,8 +238,8 @@ end
   @test isnothing(check_sanity(ft6))
   @test codomain_axes(ft6) === codomain_axes(ft5)
   @test domain_axes(ft6) === domain_axes(ft5)
-  @test space_isequal(matrix_row_axis(ft6), matrix_row_axis(ft5))
-  @test space_isequal(matrix_column_axis(ft6), matrix_column_axis(ft5))
+  @test space_isequal(codomain_axis(ft6), codomain_axis(ft5))
+  @test space_isequal(domain_axis(ft6), domain_axis(ft5))
   @test eltype(ft6) == ComplexF64
 
   ad = adjoint(ft3)
@@ -259,11 +267,11 @@ end
   ft = FusionTensor(Float64, (g1,), (dual(g2), dual(g3)))
   @test sector_type(ft) === S
   gr = gradedrange([SectorProduct(U1(1), SU2(0), Z{2}(0)) => 1])
-  @test space_isequal(matrix_row_axis(ft), gr)
+  @test space_isequal(codomain_axis(ft), gr)
   gc = gradedrange([
     SectorProduct(U1(2), SU2(0), Z{2}(1)) => 1, SectorProduct(U1(2), SU2(1), Z{2}(1)) => 1
   ])
-  @test space_isequal(matrix_column_axis(ft), dual(gc))
+  @test space_isequal(domain_axis(ft), dual(gc))
 
   gA = gradedrange([SectorProduct(; A=U1(1)) => 1])
   gB = gradedrange([SectorProduct(; B=SU2(1//2)) => 1])
@@ -273,6 +281,6 @@ end
 
   ft = FusionTensor(Float64, (gA, gB), (dual(gA), dual(gB), gC))
   @test sector_type(ft) === S
-  @test space_isequal(matrix_row_axis(ft), gABC)
-  @test space_isequal(matrix_column_axis(ft), dual(gABC))
+  @test space_isequal(codomain_axis(ft), gABC)
+  @test space_isequal(domain_axis(ft), dual(gABC))
 end

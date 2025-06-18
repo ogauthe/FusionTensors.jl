@@ -12,8 +12,8 @@ using FusionTensors:
   leaves,
   outer_multiplicity_indices,
   root_sector
-using GradedArrays: blocklabels, sector_type
-using GradedArrays.SymmetrySectors: ×, SectorProduct, SU, SU2, TrivialSector, arguments
+using GradedArrays:
+  ×, SectorProduct, SU, SU2, TrivialSector, arguments, dual, flip, gradedrange, sector_type
 
 @testset "Trivial fusion trees" begin
   q = TrivialSector()
@@ -95,6 +95,41 @@ end
 end
 
 @testset "SU(3) SectorFusionTree" begin
+  # convention: irreps are already dualed if needed, arrows do not affect them. They only
+  # affect the basis on which the tree projects for self-dual irreps.
+  f3 = SU{3}((1, 0))
+  c3 = dual(f3)
+
+  trees = build_trees((f3, f3), (false, false))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, f3), (true, false))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, f3), (false, true))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, f3), (true, true))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+
+  trees = build_trees((f3, c3), (false, false))
+  @test root_sector.(trees) == [SU{3}((0, 0)), SU{3}((2, 1))]
+
+  trees = build_trees((c3, c3), (false, false))
+  @test root_sector.(trees) == [SU{3}((1, 0)), SU{3}((2, 2))]
+
+  # test GradedUnitRange interface
+  g = gradedrange([SU{3}((1, 0)) => 1])
+  trees = build_trees(g, g)
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+  trees = build_trees(g, flip(g))
+  @test root_sector.(trees) == [SU{3}((1, 1)), SU{3}((2, 0))]
+  trees = build_trees(g, flip(dual(g)))
+  @test root_sector.(trees) == [SU{3}((0, 0)), SU{3}((2, 1))]
+  trees = build_trees(g, dual(g))
+  @test root_sector.(trees) == [SU{3}((0, 0)), SU{3}((2, 1))]
+
+  # test outer outer_multiplicity > 1
   a8 = SU{3}((2, 1))
   trees = build_trees((a8, a8), (false, false))
   @test length(trees) == 6
