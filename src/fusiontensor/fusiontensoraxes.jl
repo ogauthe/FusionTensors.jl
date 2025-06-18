@@ -7,7 +7,7 @@ using GradedArrays:
   dual,
   sector_type,
   trivial
-using TensorAlgebra: BlockedTuple
+using TensorAlgebra: AbstractBlockPermutation, BlockedTuple
 using TensorProducts: ⊗
 using TypeParameterAccessors: type_parameters
 
@@ -77,6 +77,10 @@ end
 
 for f in [:(getindex), :(iterate)]
   @eval Base.$f(fta::FusionTensorAxes, i) = $f(outer_axes(fta), i)
+end
+
+function Base.getindex(fta::FusionTensorAxes, bp::AbstractBlockPermutation)
+  return FusionTensorAxes(outer_axes(fta)[bp])
 end
 
 Base.copy(fta::FusionTensorAxes) = FusionTensorAxes(copy.(outer_axes(fta)))

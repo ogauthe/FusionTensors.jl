@@ -67,6 +67,7 @@ end
   @test all(map(r -> space_isequal(r, g2), fta[Block(1)]))
   @test length(fta[Block(2)]) == 2
   @test all(map(r -> space_isequal(r, g2b), fta[Block(2)]))
+  @test length.(fta) == tuplemortar(((2, 2), (2, 2)))
 
   @test blocklength(fta) == 2
   @test blocklengths(fta) == (2, 2)
