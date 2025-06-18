@@ -66,9 +66,11 @@ function Base.deepcopy(ft::FusionTensor)
   )
 end
 
-# eachindex is automatically defined for AbstractArray. We do not want it.
-Base.eachindex(::FusionTensor) = error("eachindex not defined for FusionTensor")
+# TBD eachindex with fusion trees
+# NEED TO DEFINE getindex(::FusionTensor, ::Tuple{SectorFusionTree,SectorFusionTree})
+Base.eachindex(ft::FusionTensor) = keys(trees_block_mapping(ft))
 
+# TBD define getindex(ft, ::AbstractSector) to access matrix block?
 function Base.getindex(ft::FusionTensor, f1::SectorFusionTree, f2::SectorFusionTree)
   charge_matrix = data_matrix(ft)[trees_block_mapping(ft)[f1, f2]]
   return reshape(charge_matrix, charge_block_size(ft, f1, f2))

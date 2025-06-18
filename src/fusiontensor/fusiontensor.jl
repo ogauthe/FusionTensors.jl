@@ -62,9 +62,6 @@ domain_axes(ft::FusionTensor) = axes(ft)[Block(2)]
 ndims_codomain(ft::FusionTensor) = length(codomain_axes(ft))
 ndims_domain(ft::FusionTensor) = length(domain_axes(ft))
 
-dummy_axis(ft::FusionTensor) = dummy_axis(sector_type(ft))
-dummy_axis(::Type{S}) where {S<:AbstractSector} = gradedrange([trivial(S) => 1])
-
 function codomain_axis(ft::FusionTensor)
   if ndims_codomain(ft) == 0
     return dummy_axis(ft)
@@ -173,7 +170,7 @@ function FusionTensor(elt::Type, raw_legs::BlockedTuple{2})
 end
 
 function fuse_axes(::Type{S}, ::Tuple{}) where {S<:AbstractSector}
-  fused_axis = gradedrange([trivial(S) => 1])
+  fused_axis = dummy_axis(S)
   trees_to_ranges_mapping = Dict([SectorFusionTree{S}() => Block(1)[1:1]])
   return fused_axis, trees_to_ranges_mapping
 end
