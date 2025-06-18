@@ -80,6 +80,14 @@ end
   @test space_isequal(codomain_axis(fta), g2 ⊗ g2)
   @test space_isequal(domain_axis(fta), dual(g2 ⊗ g2))
   @test space_isequal(dummy_axis(fta), dummy_axis(typeof(s2)))
+
+  @test fta == fta
+  @test copy(fta) == fta
+  @test deepcopy(fta) == fta
+  @test fta != FusionTensorAxes(tuplemortar(((g2, g2), (g2b, g2))))
+  @test fta != FusionTensorAxes(tuplemortar(((g2, g2, g2b), (g2b,))))
+
+  @test fta == FusionTensorAxes((g2, g2), (g2b, g2b))
 end
 
 @testset "Empty FusionTensorAxes" begin

@@ -44,7 +44,7 @@ function transpose_mapping(b::BlockIndexRange{2})
   return new_block[reverse(b.indices)...]
 end
 function Base.adjoint(ft::FusionTensor)
-  new_axes = tuplemortar((dual.(domain_axes(ft)), dual.(codomain_axes(ft))))
+  new_axes = FusionTensorAxes(dual.(domain_axes(ft)), dual.(codomain_axes(ft)))
   return FusionTensor(
     adjoint(data_matrix(ft)), new_axes, transpose_mapping(trees_block_mapping(ft))
   )

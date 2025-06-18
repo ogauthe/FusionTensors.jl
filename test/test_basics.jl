@@ -122,7 +122,7 @@ end
   @test checkaxes(codomain_axes(ft), (g1, g2))
   @test checkaxes(domain_axes(ft), (g3, g4))
 
-  @test axes(ft) == tuplemortar(((g1, g2), (g3, g4)))
+  @test axes(ft) == FusionTensorAxes(tuplemortar(((g1, g2), (g3, g4))))
   @test ndims_codomain(ft) == 2
   @test ndims_domain(ft) == 2
   @test size(data_matrix(ft)) == (30, 12)

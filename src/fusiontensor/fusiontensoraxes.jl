@@ -47,7 +47,8 @@ struct FusionTensorAxes{BT<:BlockedTuple{2}}
   outer_axes::BT
 
   function FusionTensorAxes{BT}(bt) where {BT}
-    return new{BT}(promote_sectors(bt))
+    @assert BT === typeof(promote_sectors(bt))
+    return new{BT}(bt)
   end
 end
 
@@ -57,10 +58,9 @@ outer_axes(fta::FusionTensorAxes) = fta.outer_axes
 
 # ====================================  Constructors  ======================================
 
-function FusionTensorAxes(
-  bt::BlockedTuple{2,<:Any,<:NTuple{<:Any,<:AbstractGradedUnitRange}}
-)
-  return FusionTensorAxes{typeof(bt)}(bt)
+function FusionTensorAxes(bt::BlockedTuple{2})
+  promoted = promote_sectors(bt)
+  return FusionTensorAxes{typeof(promoted)}(promoted)
 end
 
 function FusionTensorAxes(codomain_legs, domain_legs)
@@ -83,7 +83,13 @@ Base.copy(fta::FusionTensorAxes) = FusionTensorAxes(copy.(outer_axes(fta)))
 
 Base.deepcopy(fta::FusionTensorAxes) = FusionTensorAxes(deepcopy.(outer_axes(fta)))
 
-Base.:==(fta::FusionTensorAxes) = true
+function Base.:(==)(a::FusionTensorAxes, b::FusionTensorAxes)
+  blocklengths(a) != blocklengths(b) && return false
+  for i in 1:length(a)
+    !space_isequal(a[i], b[i]) && return false
+  end
+  return true
+end
 
 # ================================  BlockArrays interface  =================================
 
