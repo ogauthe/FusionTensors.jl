@@ -23,90 +23,28 @@ using TensorAlgebra: BlockedTuple, tuplemortar
 using TensorProducts: tensor_product
 using TypeParameterAccessors: type_parameters
 
-struct FusionTensor{T,N,Axes<:FusionTensorAxes,Mat<:AbstractMatrix{T},Mapping} <:
-       AbstractArray{T,N}
-  data_matrix::Mat
-  axes::Axes
-  trees_block_mapping::Mapping
+# =======================================  Misc  ===========================================
 
-  # inner constructor to impose constraints on types
-  function FusionTensor{T,N,Axes,Mat,Mapping}(
-    mat, legs, trees_block_mapping
-  ) where {T,N,Axes,Mat,Mapping}
-    S = sector_type(legs)
-    @assert keytype(trees_block_mapping) <:
-      Tuple{<:SectorFusionTree{S},<:SectorFusionTree{S}}
-    return new{T,N,Axes,Mat,Mapping}(mat, legs, trees_block_mapping)
-  end
-end
-
-function FusionTensor(
-  mat::AbstractMatrix,
-  legs::FusionTensorAxes,
-  trees_block_mapping::Dict{<:Tuple{<:SectorFusionTree,<:SectorFusionTree}},
-)
-  return FusionTensor{
-    eltype(mat),length(legs),typeof(legs),typeof(mat),typeof(trees_block_mapping)
-  }(
-    mat, legs, trees_block_mapping
-  )
-end
-
-# getters
-data_matrix(ft::FusionTensor) = ft.data_matrix
-trees_block_mapping(ft::FusionTensor) = ft.trees_block_mapping
-
-# misc access
-for f in [
-  :(codomain_axes),
-  :(codomain_axis),
-  :(domain_axes),
-  :(domain_axis),
-  :(ndims_codomain),
-  :(ndims_domain),
-  :(GradedArrays.sector_type),
-]
-  @eval $f(ft::FusionTensor) = $f(axes(ft))
-end
-
-function charge_block_size(ft::FusionTensor, f1::SectorFusionTree, f2::SectorFusionTree)
-  b = Tuple(findblock(ft, f1, f2))
-  return ntuple(i -> sector_multiplicity(axes(ft, i)[b[i]]), ndims(ft))
-end
-
-# BlockArrays interface
-function BlockArrays.findblock(ft::FusionTensor, f1::SectorFusionTree, f2::SectorFusionTree)
-  # find outer block corresponding to fusion trees
-  @assert typeof((f1, f2)) === keytype(trees_block_mapping(ft))
-  b1 = find_sector_block.(leaves(f1), codomain_axes(ft))
-  b2 = find_sector_block.(leaves(f2), domain_axes(ft))
-  return Block(b1..., b2...)
-end
 # TBD move to GradedArrays? rename findfirst_sector?
 function find_sector_block(s::AbstractSector, g::AbstractGradedUnitRange)
   return findfirst(==(s), sectors(flip_dual(g)))
 end
 
-# constructor from split axes
-function FusionTensor(
-  x,
-  codomain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
-  domain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
-)
-  return FusionTensor(x, tuplemortar((codomain_legs, domain_legs)))
+# TBD move to GradedArrays?
+function checkaxes(::Type{Bool}, axes1, axes2)
+  return length(axes1) == length(axes2) && all(space_isequal.(axes1, axes2))
 end
 
-FusionTensor(x, legs::BlockedTuple{2}) = FusionTensor(x, FusionTensorAxes(legs))
+# TBD move to GradedArrays?
+checkaxes_dual(axes1, axes2) = checkaxes(axes1, dual.(axes2))
+function checkaxes(ax1, ax2)
+  return checkaxes(Bool, ax1, ax2) ||
+         throw(DimensionMismatch(lazy"$ax1 does not match $ax2"))
+end
 
-#constructor from precomputed data_matrix
-function FusionTensor(mat::AbstractMatrix, legs::FusionTensorAxes)
-  # init with empty data_matrix to construct trees_block_mapping
-  ft = FusionTensor(eltype(mat), legs)
-  for b in eachblockstoredindex(mat)
-    @assert b in eachblockstoredindex(data_matrix(ft))  # check matrix block is allowed
-    data_matrix(ft)[b] = mat[b]
-  end
-  return ft
+function to_blockindexrange(b1::BlockIndexRange{1}, b2::BlockIndexRange{1})
+  t = (b1, b2)
+  return Block(Block.(t))[to_block_indices.(t)...]
 end
 
 function flip_domain(nonflipped_col_axis, nonflipped_trees_to_ranges)
@@ -115,19 +53,6 @@ function flip_domain(nonflipped_col_axis, nonflipped_trees_to_ranges)
     map(((tree, v),) -> flip(tree) => v, collect(nonflipped_trees_to_ranges))
   )
   return col_axis, domain_trees_to_ranges_mapping
-end
-
-# empty matrix
-function FusionTensor(elt::Type, legs::FusionTensorAxes)
-  S = sector_type(legs)
-  row_axis, codomain_trees_to_ranges = fuse_axes(S, codomain_axes(legs))
-  col_axis, domain_trees_to_ranges = flip_domain(fuse_axes(S, dual.(domain_axes(legs)))...)
-
-  mat = initialize_data_matrix(elt, row_axis, col_axis)
-  tree_to_block_mapping = intersect_codomain_domain(
-    codomain_trees_to_ranges, domain_trees_to_ranges
-  )
-  return FusionTensor(mat, legs, tree_to_block_mapping)
 end
 
 function fuse_axes(::Type{S}, ::Tuple{}) where {S<:AbstractSector}
@@ -171,11 +96,6 @@ function compute_inner_ranges(fusion_trees_mult)
   return fused_leg, range_mapping
 end
 
-function to_blockindexrange(b1::BlockIndexRange{1}, b2::BlockIndexRange{1})
-  t = (b1, b2)
-  return Block(Block.(t))[to_block_indices.(t)...]
-end
-
 function intersect_codomain_domain(
   codomain_trees_to_ranges_mapping::Dict{<:SectorFusionTree,<:BlockIndexRange{1}},
   domain_trees_to_ranges_mapping::Dict{<:SectorFusionTree,<:BlockIndexRange{1}},
@@ -215,11 +135,111 @@ function initialize_data_matrix(
   return mat
 end
 
-checkaxes_dual(axes1, axes2) = checkaxes(axes1, dual.(axes2))
-function checkaxes(ax1, ax2)
-  return checkaxes(Bool, ax1, ax2) ||
-         throw(DimensionMismatch(lazy"$ax1 does not match $ax2"))
+# ====================================  Definitions  =======================================
+
+struct FusionTensor{T,N,Axes<:FusionTensorAxes,Mat<:AbstractMatrix{T},Mapping} <:
+       AbstractArray{T,N}
+  data_matrix::Mat
+  axes::Axes
+  trees_block_mapping::Mapping
+
+  # inner constructor to impose constraints on types
+  function FusionTensor{T,N,Axes,Mat,Mapping}(
+    mat, legs, trees_block_mapping
+  ) where {T,N,Axes,Mat,Mapping}
+    S = sector_type(legs)
+    @assert keytype(trees_block_mapping) <:
+      Tuple{<:SectorFusionTree{S},<:SectorFusionTree{S}}
+    return new{T,N,Axes,Mat,Mapping}(mat, legs, trees_block_mapping)
+  end
 end
-function checkaxes(::Type{Bool}, axes1, axes2)
-  return length(axes1) == length(axes2) && all(space_isequal.(axes1, axes2))
+
+# =====================================  Accessors  ========================================
+
+data_matrix(ft::FusionTensor) = ft.data_matrix
+trees_block_mapping(ft::FusionTensor) = ft.trees_block_mapping
+
+# ====================================  Constructors  ======================================
+
+function FusionTensor(
+  mat::AbstractMatrix,
+  legs::FusionTensorAxes,
+  trees_block_mapping::Dict{<:Tuple{<:SectorFusionTree,<:SectorFusionTree}},
+)
+  return FusionTensor{
+    eltype(mat),length(legs),typeof(legs),typeof(mat),typeof(trees_block_mapping)
+  }(
+    mat, legs, trees_block_mapping
+  )
+end
+
+# empty matrix
+function FusionTensor(elt::Type, legs::FusionTensorAxes)
+  S = sector_type(legs)
+  row_axis, codomain_trees_to_ranges = fuse_axes(S, codomain_axes(legs))
+  col_axis, domain_trees_to_ranges = flip_domain(fuse_axes(S, dual.(domain_axes(legs)))...)
+
+  mat = initialize_data_matrix(elt, row_axis, col_axis)
+  tree_to_block_mapping = intersect_codomain_domain(
+    codomain_trees_to_ranges, domain_trees_to_ranges
+  )
+  return FusionTensor(mat, legs, tree_to_block_mapping)
+end
+
+#constructor from precomputed data_matrix
+function FusionTensor(mat::AbstractMatrix, legs::FusionTensorAxes)
+  # init with empty data_matrix to construct trees_block_mapping
+  ft = FusionTensor(eltype(mat), legs)
+  for b in eachblockstoredindex(mat)
+    b in eachblockstoredindex(data_matrix(ft)) ||
+      throw(ArgumentError("matrix block $b is not allowed"))
+    data_matrix(ft)[b] = mat[b]
+  end
+  return ft
+end
+
+FusionTensor(x, legs::BlockedTuple{2}) = FusionTensor(x, FusionTensorAxes(legs))
+
+# constructor from split axes
+function FusionTensor(
+  x,
+  codomain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
+  domain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
+)
+  return FusionTensor(x, tuplemortar((codomain_legs, domain_legs)))
+end
+
+# ================================  BlockArrays interface  =================================
+
+function BlockArrays.findblock(ft::FusionTensor, f1::SectorFusionTree, f2::SectorFusionTree)
+  # find outer block corresponding to fusion trees
+  @assert typeof((f1, f2)) === keytype(trees_block_mapping(ft))
+  b1 = find_sector_block.(leaves(f1), codomain_axes(ft))
+  b2 = find_sector_block.(leaves(f2), domain_axes(ft))
+  return Block(b1..., b2...)
+end
+
+# ==============================  GradedArrays interface  ==================================
+
+function GradedArrays.sector_type(::Type{FT}) where {FT<:FusionTensor}
+  return sector_type(type_parameters(FT, 3))
+end
+
+# ==============================  FusionTensor interface  ==================================
+
+# misc access
+for f in [
+  :(codomain_axes),
+  :(codomain_axis),
+  :(domain_axes),
+  :(domain_axis),
+  :(ndims_codomain),
+  :(ndims_domain),
+]
+  @eval $f(ft::FusionTensor) = $f(axes(ft))
+end
+
+function charge_block_size(ft::FusionTensor, f1::SectorFusionTree, f2::SectorFusionTree)
+  b = Tuple(findblock(ft, f1, f2))
+  return ntuple(i -> sector_multiplicity(axes(ft, i)[b[i]]), ndims(ft))
 end

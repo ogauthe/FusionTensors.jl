@@ -58,6 +58,7 @@ include("setup.jl")
   @test isnothing(check_sanity(ft0))
   @test isnothing(check_sanity(ft1))
   @test sector_type(ft1) === U1{Int}
+  @test sector_type(typeof(ft1)) === U1{Int}
 
   # Base methods
   @test eltype(ft1) === Float64
