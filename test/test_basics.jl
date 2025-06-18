@@ -3,6 +3,7 @@ using Test: @test, @test_throws, @testset
 using BlockSparseArrays: BlockSparseArray
 using FusionTensors:
   FusionTensor,
+  FusionTensorAxes,
   codomain_axes,
   data_matrix,
   domain_axes,
