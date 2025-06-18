@@ -60,6 +60,10 @@ include("setup.jl")
   @test sector_type(ft1) === U1{Int}
   @test sector_type(typeof(ft1)) === U1{Int}
 
+  m1 = BlockSparseArray{Float64}(undef, g1, g2)
+  m1[Block(2, 1)] = ones(2, 2)  # forbidden
+  @test_throws ArgumentError FusionTensor(m1, (g1,), (g2,))
+
   # Base methods
   @test eltype(ft1) === Float64
   @test length(ft1) == 30
