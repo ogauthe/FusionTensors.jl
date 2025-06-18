@@ -1,32 +1,99 @@
-using LinearAlgebra: norm
-using Test: @test, @testset, @test_broken
+using Test: @test, @testset
 
-using BlockArrays: blocklengths
-using TensorAlgebra: BlockedTuple, tuplemortar
+using TensorProducts: ⊗
+using BlockArrays: blockedrange, blocklength, blocklengths
+using TensorAlgebra: tuplemortar
 
-using FusionTensors: FusionTensorAxes, dummy_axis, ndims_domain, ndims_codomain
+using FusionTensors:
+  FusionTensorAxes,
+  dummy_axis,
+  ndims_domain,
+  ndims_codomain,
+  codomain_axes,
+  codomain_axis,
+  domain_axes,
+  domain_axis,
+  outer_axes,
+  promote_sector_type,
+  promote_sectors
 using GradedArrays:
-  O2, U1, SectorProduct, SU2, dual, gradedrange, sector_type, space_isequal
-using TensorAlgebra: BlockedPermutation, blockedperm, blockpermute, tuplemortar
+  ×, U1, SectorProduct, TrivialSector, SU2, dual, gradedrange, sector_type, space_isequal
 
 @testset "misc FusionTensors.jl" begin
+  g1 = gradedrange([U1(0) => 1])
   @test space_isequal(dummy_axis(), gradedrange([TrivialSector() => 1]))
-  @test space_isequal(dummy_axis(U1), gradedrange([TrivialSector() => 1]))
+  @test space_isequal(dummy_axis(U1), g1)
+  @test space_isequal(dummy_axis(typeof(SU2(1))), gradedrange([SU2(0) => 1]))
+
+  @test promote_sector_type(U1(1), U1(1)) === typeof(U1(1))
+  @test promote_sector_type(g1, U1(1)) === typeof(U1(1))
+  @test promote_sector_type(g1, g1) === typeof(U1(1))
+  @test promote_sector_type((g1, g1)) === typeof(U1(1))
+
+  sNS = SectorProduct(; N=U1(1), S=SU2(1 / 2))
+  gN = gradedrange([(; N=U1(1)) => 1])
+  gS = gradedrange([(; S=SU2(1 / 2)) => 1])
+  @test promote_sector_type(gN, gS) == typeof(sNS)
+
+  @test promote_sectors((gN, gS)) isa NTuple{2,typeof(gradedrange([sNS => 1]))}
 end
 
 @testset "FusionTensorAxes" begin
-  g2 = gradedrange([SU2(1//2) => 1])
+  s2 = SU2(1//2)
+  g2 = gradedrange([s2 => 1])
   g2b = dual(g2)
 
   bt = tuplemortar(((g2, g2), (g2b, g2b)))
   fta = FusionTensorAxes(bt)
 
   @test fta isa FusionTensorAxes
-  @test length(fta) == 2
+  @test outer_axes(fta) == bt
+
+  @test Tuple(fta) == Tuple(bt)
+  @test space_isequal(only(axes(fta)), blockedrange([2, 2]))
+  @test iterate(fta) == (g2, 2)
+  @test iterate(fta, 1) == (g2, 2)
+  @test iterate(fta, 2) == (g2, 3)
+  @test iterate(fta, 3) == (g2b, 4)
+  @test iterate(fta, 4) == (g2b, 5)
+  @test isnothing(iterate(fta, 5))
+
+  @test length(fta) == 4
   @test space_isequal(fta[1], g2)
   @test space_isequal(fta[2], g2)
   @test space_isequal(fta[3], g2b)
   @test space_isequal(fta[4], g2b)
+  @test length(fta[Block(1)]) == 2
+  @test all(map(r -> space_isequal(r, g2), fta[Block(1)]))
+  @test length(fta[Block(2)]) == 2
+  @test all(map(r -> space_isequal(r, g2b), fta[Block(2)]))
 
-  @test Tuple(fta) == Tuple(bt)
+  @test blocklength(fta) == 2
+  @test blocklengths(fta) == (2, 2)
+  @test blocks(fta) == blocks(bt)
+
+  @test sector_type(fta) === sector_type(g2)
+  @test length(codomain_axes(fta)) == 2
+  @test all(map(r -> space_isequal(r, g2), codomain_axes(fta)))
+  @test length(domain_axes(fta)) == 2
+  @test all(map(r -> space_isequal(r, g2b), domain_axes(fta)))
+  @test space_isequal(codomain_axis(fta), g2 ⊗ g2)
+  @test space_isequal(domain_axis(fta), dual(g2 ⊗ g2))
+  @test space_isequal(dummy_axis(fta), dummy_axis(typeof(s2)))
+end
+
+@testset "Empty FusionTensorAxes" begin
+  fta = FusionTensorAxes(tuplemortar(((), ())))
+  @test fta isa FusionTensorAxes
+
+  @test length(fta) == 0
+  @test isempty(fta)
+  @test blocklength(fta) == 2
+  @test blocklengths(fta) == (0, 0)
+  @test sector_type(fta) == TrivialSector
+
+  @test codomain_axes(fta) == ()
+  @test space_isequal(codomain_axis(fta), dummy_axis())
+  @test domain_axes(fta) == ()
+  @test space_isequal(domain_axis(fta), dual(dummy_axis()))
 end
