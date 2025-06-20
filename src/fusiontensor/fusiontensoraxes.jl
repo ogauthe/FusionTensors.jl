@@ -7,16 +7,11 @@ using GradedArrays:
   dual,
   sector_type,
   trivial
-using TensorAlgebra: AbstractBlockPermutation, BlockedTuple
+using TensorAlgebra: TensorAlgebra, AbstractBlockPermutation, BlockedTuple
 using TensorProducts: ⊗
 using TypeParameterAccessors: type_parameters
 
 # =======================================  Misc  ===========================================
-
-dummy_axis() = dummy_axis(TrivialSector)
-dummy_axis(x) = dummy_axis(typeof(x))
-dummy_axis(::Type{T}) where {T} = dummy_axis(sector_type(T))
-dummy_axis(::Type{S}) where {S<:AbstractSector} = gradedrange([trivial(S) => 1])
 
 promote_sector_type(legs::Tuple) = promote_sector_type(legs...)
 
@@ -113,6 +108,10 @@ function GradedArrays.sector_type(::Type{FTA}) where {BT,FTA<:FusionTensorAxes{B
   return sector_type(type_parameters(type_parameters(BT, 3), 1))
 end
 
+# ==============================  TensorAlgebra interface  =================================
+
+TensorAlgebra.trivial_axis(fta::FusionTensorAxes) = trivial_axis(sector_type(fta))
+
 # ==============================  FusionTensor interface  ==================================
 
 codomain_axes(fta::FusionTensorAxes) = fta[Block(1)]
@@ -121,14 +120,14 @@ domain_axes(fta::FusionTensorAxes) = fta[Block(2)]
 
 function codomain_axis(fta::FusionTensorAxes)
   if ndims_codomain(fta) == 0
-    return dummy_axis(fta)
+    return trivial_axis(fta)
   end
   return ⊗(codomain_axes(fta)...)
 end
 
 function domain_axis(fta::FusionTensorAxes)
   if ndims_domain(fta) == 0
-    return dual(dummy_axis(fta))
+    return dual(trivial_axis(fta))
   end
   return dual(⊗(dual.(domain_axes(fta))...))
 end

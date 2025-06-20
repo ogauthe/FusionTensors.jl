@@ -1,5 +1,6 @@
 using Test: @test, @test_throws, @testset
 
+using BlockArrays: Block
 using BlockSparseArrays: BlockSparseArray
 using FusionTensors:
   FusionTensor,
