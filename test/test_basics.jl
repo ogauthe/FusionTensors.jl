@@ -1,7 +1,7 @@
 using Test: @test, @test_throws, @testset
 
 using BlockArrays: Block
-using BlockSparseArrays: BlockSparseArray
+using BlockSparseArrays: BlockSparseArray, eachblockstoredindex
 using FusionTensors:
   FusionTensor,
   FusionTensorAxes,
@@ -28,6 +28,8 @@ using GradedArrays:
   space_isequal
 using TensorAlgebra: tuplemortar
 using TensorProducts: tensor_product
+using LinearAlgebra: LinearAlgebra
+using Random: Random
 
 include("setup.jl")
 
@@ -35,8 +37,14 @@ include("setup.jl")
   g1 = gradedrange([U1(0) => 1, U1(1) => 2, U1(2) => 3])
   g2 = dual(gradedrange([U1(0) => 2, U1(1) => 2, U1(3) => 1]))
 
+  fta = FusionTensorAxes((g1,), (g2,))
+  ft0 = FusionTensor{Float64}(undef, fta)
+  @test ft0 isa FusionTensor
+  @test space_isequal(codomain_axis(ft0), g1)
+  @test space_isequal(domain_axis(ft0), g2)
+
   # check dual convention when initializing data_matrix
-  ft0 = FusionTensor(Float64, (g1,), (g2,))
+  ft0 = FusionTensor{Float64}(undef, (g1,), (g2,))
   @test ft0 isa FusionTensor
   @test space_isequal(codomain_axis(ft0), g1)
   @test space_isequal(domain_axis(ft0), g2)
@@ -146,7 +154,7 @@ end
   g1 = gradedrange([U1(0) => 1, U1(1) => 2, U1(2) => 3])
 
   # one row axis
-  ft1 = FusionTensor(Float64, (g1,), ())
+  ft1 = FusionTensor{Float64}(undef, (g1,), ())
   @test ndims_codomain(ft1) == 1
   @test ndims_domain(ft1) == 0
   @test ndims(ft1) == 1
@@ -156,7 +164,7 @@ end
   @test sector_type(ft1) === sector_type(g1)
 
   # one column axis
-  ft2 = FusionTensor(Float64, (), (g1,))
+  ft2 = FusionTensor{Float64}(undef, (), (g1,))
   @test ndims_codomain(ft2) == 0
   @test ndims_domain(ft2) == 1
   @test ndims(ft2) == 1
@@ -166,7 +174,7 @@ end
   @test sector_type(ft2) === sector_type(g1)
 
   # zero axis
-  ft3 = FusionTensor(Float64, (), ())
+  ft3 = FusionTensor{Float64}(undef, (), ())
   @test ndims_codomain(ft3) == 0
   @test ndims_domain(ft3) == 0
   @test ndims(ft3) == 0
@@ -181,7 +189,7 @@ end
   g2 = gradedrange([U1(0) => 2, U1(1) => 2, U1(3) => 1])
   g3 = gradedrange([U1(-1) => 1, U1(0) => 2, U1(1) => 1])
   g4 = gradedrange([U1(-1) => 1, U1(0) => 1, U1(1) => 1])
-  ft3 = FusionTensor(Float64, (g1, g2), (g3, g4))
+  ft3 = FusionTensor{Float64}(undef, (g1, g2), (g3, g4))
   @test isnothing(check_sanity(ft3))
 
   ft4 = +ft3
@@ -260,10 +268,49 @@ end
   @test space_isequal(dual(g4), codomain_axes(ad)[2])
   @test isnothing(check_sanity(ad))
 
-  ft7 = FusionTensor(Float64, (g1,), (g2, g3, g4))
+  ft7 = FusionTensor{Float64}(undef, (g1,), (g2, g3, g4))
   @test_throws DimensionMismatch ft7 + ft3
   @test_throws DimensionMismatch ft7 - ft3
   @test_throws DimensionMismatch ft7 * ft3
+end
+
+@testset "specific constructors" begin
+  g1 = gradedrange([U1(0) => 1, U1(1) => 2, U1(2) => 3])
+  g2 = gradedrange([U1(0) => 2, U1(1) => 2, U1(3) => 1])
+  g3 = gradedrange([U1(-1) => 1, U1(0) => 2, U1(1) => 1])
+  g4 = gradedrange([U1(-1) => 1, U1(0) => 1, U1(1) => 1])
+
+  fta = FusionTensorAxes((g1,), (g2, g3))
+  @test zeros(fta) isa FusionTensor{Float64,3}
+  @test zeros(ComplexF64, fta) isa FusionTensor{ComplexF64,3}
+
+  rng = Random.default_rng()
+  ft1 = randn(rng, ComplexF64, fta)
+  @test ft1 isa FusionTensor{ComplexF64,3}
+  @test all(!=(0), data_matrix(ft1)[Block(1, 5)])
+  @test randn(rng, fta) isa FusionTensor{Float64,3}
+  @test randn(ComplexF64, fta) isa FusionTensor{ComplexF64,3}
+  @test randn(fta) isa FusionTensor{Float64,3}
+
+  ft2 = FusionTensor(LinearAlgebra.I, (g1, g2))
+  @test ft2 isa FusionTensor{Float64,4}
+  @test axes(ft2) == FusionTensorAxes((g1, g2), dual.((g1, g2)))
+  @test collect(eachblockstoredindex(data_matrix(ft2))) == map(i -> Block(i, i), 1:6)
+  for i in 1:6
+    m = data_matrix(ft2)[Block(i, i)]
+    @test m == LinearAlgebra.I(size(m, 1))
+  end
+
+  ft2 = FusionTensor(3 * LinearAlgebra.I, (g1, g2))
+  @test ft2 isa FusionTensor{Float64,4}
+  @test axes(ft2) == FusionTensorAxes((g1, g2), dual.((g1, g2)))
+  @test collect(eachblockstoredindex(data_matrix(ft2))) == map(i -> Block(i, i), 1:6)
+  for i in 1:6
+    m = data_matrix(ft2)[Block(i, i)]
+    @test m == 3 * LinearAlgebra.I(size(m, 1))
+  end
+
+  @test FusionTensor{ComplexF64}(LinearAlgebra.I, (g1, g2)) isa FusionTensor{ComplexF64,4}
 end
 
 @testset "missing SectorProduct" begin
@@ -272,7 +319,7 @@ end
   g3 = gradedrange([SectorProduct(U1(1), SU2(1//2), Z{2}(1)) => 1])
   S = sector_type(g3)
 
-  ft = FusionTensor(Float64, (g1,), (dual(g2), dual(g3)))
+  ft = FusionTensor{Float64}(undef, (g1,), (dual(g2), dual(g3)))
   @test sector_type(ft) === S
   gr = gradedrange([SectorProduct(U1(1), SU2(0), Z{2}(0)) => 1])
   @test space_isequal(codomain_axis(ft), gr)
@@ -287,7 +334,7 @@ end
   gABC = tensor_product(gA, gB, gC)
   S = sector_type(gABC)
 
-  ft = FusionTensor(Float64, (gA, gB), (dual(gA), dual(gB), gC))
+  ft = FusionTensor{Float64}(undef, (gA, gB), (dual(gA), dual(gB), gC))
   @test sector_type(ft) === S
   @test space_isequal(codomain_axis(ft), gABC)
   @test space_isequal(domain_axis(ft), dual(gABC))

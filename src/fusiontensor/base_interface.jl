@@ -1,8 +1,7 @@
 # This files defines Base functions for FusionTensor
 
 using Accessors: @set
-
-using BlockSparseArrays: @view!
+using BlockSparseArrays: @view!, eachstoredblock
 using TensorAlgebra: BlockedTuple, tuplemortar
 
 set_data_matrix(ft::FusionTensor, data_matrix) = @set ft.data_matrix = data_matrix
@@ -105,7 +104,7 @@ function Base.similar(
   return similar(ft, T, tuplemortar(new_axes))
 end
 function Base.similar(::FusionTensor, ::Type{T}, new_axes::BlockedTuple{2}) where {T}
-  return FusionTensor(T, new_axes)
+  return FusionTensor{T}(undef, new_axes)
 end
 
 Base.show(io::IO, ft::FusionTensor) = print(io, "$(ndims(ft))-dim FusionTensor")

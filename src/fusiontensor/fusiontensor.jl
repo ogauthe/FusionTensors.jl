@@ -19,6 +19,8 @@ using GradedArrays:
   sectormergesort,
   sectors,
   space_isequal
+using LinearAlgebra: UniformScaling
+using Random: Random, AbstractRNG, randn!
 using TensorAlgebra: BlockedTuple, trivial_axis, tuplemortar
 using TensorProducts: tensor_product
 using TypeParameterAccessors: type_parameters
@@ -174,12 +176,12 @@ function FusionTensor(
 end
 
 # empty matrix
-function FusionTensor(elt::Type, legs::FusionTensorAxes)
+function FusionTensor{T}(::UndefInitializer, legs::FusionTensorAxes) where {T}
   S = sector_type(legs)
   row_axis, codomain_trees_to_ranges = fuse_axes(S, codomain(legs))
   col_axis, domain_trees_to_ranges = flip_domain(fuse_axes(S, dual.(domain(legs)))...)
 
-  mat = initialize_data_matrix(elt, row_axis, col_axis)
+  mat = initialize_data_matrix(T, row_axis, col_axis)
   tree_to_block_mapping = intersect_codomain_domain(
     codomain_trees_to_ranges, domain_trees_to_ranges
   )
@@ -189,7 +191,7 @@ end
 #constructor from precomputed data_matrix
 function FusionTensor(mat::AbstractMatrix, legs::FusionTensorAxes)
   # init with empty data_matrix to construct trees_block_mapping
-  ft = FusionTensor(eltype(mat), legs)
+  ft = FusionTensor{eltype(mat)}(undef, legs)
   for b in eachblockstoredindex(mat)
     b in eachblockstoredindex(data_matrix(ft)) ||
       throw(ArgumentError("matrix block $b is not allowed"))
@@ -199,6 +201,9 @@ function FusionTensor(mat::AbstractMatrix, legs::FusionTensorAxes)
 end
 
 FusionTensor(x, legs::BlockedTuple{2}) = FusionTensor(x, FusionTensorAxes(legs))
+function FusionTensor{T}(x, legs::BlockedTuple{2}) where {T}
+  return FusionTensor{T}(x, FusionTensorAxes(legs))
+end
 
 # constructor from split axes
 function FusionTensor(
@@ -207,6 +212,47 @@ function FusionTensor(
   domain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
 )
   return FusionTensor(x, tuplemortar((codomain_legs, domain_legs)))
+end
+
+function FusionTensor{T}(
+  x,
+  codomain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
+  domain_legs::Tuple{Vararg{AbstractGradedUnitRange}},
+) where {T}
+  return FusionTensor{T}(x, tuplemortar((codomain_legs, domain_legs)))
+end
+
+# specific constructors
+function Base.zeros(::Type{T}, fta::FusionTensorAxes) where {T}
+  ft = FusionTensor{T}(undef, fta)
+  foreach(m -> fill!(m, zero(T)), eachstoredblock(data_matrix(ft)))
+  return ft
+end
+Base.zeros(fta::FusionTensorAxes) = zeros(Float64, fta)
+
+function Base.randn(rng::AbstractRNG, ::Type{T}, fta::FusionTensorAxes) where {T}
+  ft = FusionTensor{T}(undef, fta)
+  foreach(m -> randn!(rng, m), eachstoredblock(data_matrix(ft)))
+  return ft
+end
+Base.randn(rng::AbstractRNG, fta::FusionTensorAxes) = randn(rng, Float64, fta)
+Base.randn(::Type{T}, fta::FusionTensorAxes) where {T} = randn(Random.default_rng(), T, fta)
+Base.randn(fta::FusionTensorAxes) = randn(Float64, fta)
+
+function FusionTensor{T}(
+  s::UniformScaling, codomain_legs::Tuple{Vararg{AbstractGradedUnitRange}}
+) where {T}
+  fta = FusionTensorAxes(codomain_legs, dual.(codomain_legs))
+  ft = FusionTensor{T}(undef, fta)
+  for m in eachstoredblock(data_matrix(ft))
+    m .= s(size(m, 1))
+  end
+  return ft
+end
+function FusionTensor(
+  s::UniformScaling, codomain_legs::Tuple{Vararg{AbstractGradedUnitRange}}
+)
+  return FusionTensor{Float64}(s, codomain_legs)
 end
 
 # ================================  BlockArrays interface  =================================
