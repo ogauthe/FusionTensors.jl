@@ -107,6 +107,9 @@ end
 function Base.similar(::FusionTensor, ::Type, ::Tuple{})
   throw(MethodError(similar, (Tuple{},)))
 end
+function Base.similar(ft::FusionTensor, new_axes::Tuple{<:Tuple,<:Tuple})
+  return similar(ft, eltype(ft), new_axes)
+end
 function Base.similar(
   ft::FusionTensor, ::Type{T}, new_axes::Tuple{<:Tuple,<:Tuple}
 ) where {T}

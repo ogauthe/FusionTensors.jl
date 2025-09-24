@@ -42,11 +42,19 @@ struct FusionTensorFusionStyle <: FusionStyle end
 TensorAlgebra.FusionStyle(::Type{<:FusionTensor}) = FusionTensorFusionStyle()
 
 function TensorAlgebra.matricize(
+  ::FusionTensorFusionStyle, ft::AbstractArray, biperm::AbstractBlockPermutation{2}
+)
+  permuted = permutedims(ft, biperm)
+  return FusionTensor(
+    data_matrix(permuted), (codomain_axis(permuted),), (domain_axis(permuted),)
+  )
+end
+
+# lift ambiguity
+function TensorAlgebra.matricize(
   ::FusionTensorFusionStyle, ft::AbstractArray, biperm::BlockedTrivialPermutation{2}
 )
-  blocklengths(biperm) == blocklengths(axes(ft)) ||
-    throw(ArgumentError("Invalid trivial biperm"))
-  return FusionTensor(data_matrix(ft), (codomain_axis(ft),), (domain_axis(ft),))
+  return matricize(FusionTensorFusionStyle(), ft, blockedperm(BlockedTuple(tbp)))
 end
 
 function TensorAlgebra.unmatricize(::FusionTensorFusionStyle, m, blocked_axes)

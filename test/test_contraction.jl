@@ -10,6 +10,7 @@ using TensorAlgebra: contract, matricize, permmortar, tuplemortar, unmatricize, 
 include("setup.jl")
 
 @testset "matricize" begin
+  # TODO add non-abelian test
   g1 = gradedrange([U1(0) => 1, U1(1) => 2, U1(2) => 3])
   g2 = gradedrange([U1(0) => 2, U1(1) => 2, U1(3) => 1])
   g3 = gradedrange([U1(-1) => 1, U1(0) => 2, U1(1) => 1])

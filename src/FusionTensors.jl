@@ -10,5 +10,6 @@ include("fusiontensor/linear_algebra_interface.jl")
 include("fusiontensor/tensor_algebra_interface.jl")
 include("permutedims/unitaries.jl")
 include("permutedims/permutedims.jl")
+include("factorizations.jl")
 
 end
