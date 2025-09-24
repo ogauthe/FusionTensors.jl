@@ -15,7 +15,7 @@ function check_svd(ft, u, s, v)
   check_sanity(s)
   check_sanity(v)
   @test u isa FusionTensor{eltype(ft),ndims_codomain(ft) + 1}
-  @test s isa FusionTensor{eltype(ft),2}
+  @test s isa FusionTensor{real(eltype(ft)),2}
   @test !isdual(axes(s, 1))
   @test isdual(axes(s, 2))
   @test v isa FusionTensor{eltype(ft),ndims_domain(ft) + 1}
@@ -45,11 +45,11 @@ function check_full_svd(ft, u, s, v)
   return true
 end
 
-@testset "full SVD" begin
+@testset "full SVD (elt=$elt)" for elt in (Float64, ComplexF64)
   # matrix
   g1 = gradedrange([U1(1) => 1, U1(2) => 3])
   g2 = gradedrange([U1(1) => 2, U1(2) => 2])
-  ft = randn(FusionTensorAxes((g1,), (dual(g2),)))
+  ft = randn(elt, FusionTensorAxes((g1,), (dual(g2),)))
   u, s, v = @constinferred svd(ft, (1, 2), (1,), (2,))
   @test check_full_svd(ft, u, s, v)
   @test checkspaces(codomain_axes(s), (gradedrange([U1(1) => 1, U1(2) => 2]),))
@@ -87,10 +87,10 @@ end
   @test data_matrix(s) ≈ [3/4 0; 0 1/4]
 end
 
-@testset "Abelian truncated SVD" begin
+@testset "Abelian truncated SVD (elt=$elt)" for elt in (Float64, ComplexF64)
   g1 = gradedrange([U1(1) => 5, U1(2) => 6])
   g2 = gradedrange([U1(1) => 8, U1(2) => 4])
-  ft = randn(FusionTensorAxes((g1,), (dual(g2),)))
+  ft = randn(elt, FusionTensorAxes((g1,), (dual(g2),)))
 
   trunc = truncrank(5)
 

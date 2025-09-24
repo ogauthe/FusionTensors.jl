@@ -40,7 +40,7 @@ function MatrixAlgebraKit.initialize_output(
   s_axis = gradedrange(s_axes)
 
   U = similar(A, eltype(A), ((axes(A, 1),), (dual(s_axis),)))
-  S = similar(A, eltype(A), ((s_axis,), (dual(s_axis),)))
+  S = similar(A, real(eltype(A)), ((s_axis,), (dual(s_axis),)))
   Vᴴ = similar(A, eltype(A), ((s_axis,), (axes(A, 2),)))
   return U, S, Vᴴ
 end
