@@ -4,7 +4,8 @@ using LinearAlgebra: LinearAlgebra, isdiag
 using BlockSparseArrays: BlockSparseArray, eachstoredblock
 using FusionTensors:
   FusionTensor, FusionTensorAxes, domain_axes, codomain_axes, to_fusiontensor
-using GradedArrays: SU2, U1, checkspaces, checkspaces_dual, dual, flip, gradedrange, isdual
+using GradedArrays:
+  SU2, U1, checkspaces, checkspaces_dual, dual, flip, gradedrange, isdual, space_isequal
 using TensorAlgebra: svd, tuplemortar
 using MatrixAlgebraKit: truncrank
 
@@ -88,6 +89,7 @@ end
 end
 
 @testset "Abelian truncated SVD (elt=$elt)" for elt in (Float64, ComplexF64)
+  # only test matrices; matricize handles higer dimension tensors
   g1 = gradedrange([U1(1) => 5, U1(2) => 6])
   g2 = gradedrange([U1(1) => 8, U1(2) => 4])
   ft = randn(elt, FusionTensorAxes((g1,), (dual(g2),)))
@@ -120,4 +122,39 @@ end
   @test check_svd(ft, utrunc, strunc, vtrunc)
   @test size(strunc) == tuplemortar(((5,), (5,)))
   ft_trunc = utrunc * strunc * vtrunc
+end
+
+random_unitary(t::Tuple) = random_unitary(t...)
+random_unitary(m, n) = Matrix(LinearAlgebra.qr(randn(m, n)).Q)
+
+@testset "Non-abelian truncated SVD" begin
+  g1 = gradedrange([SU2(0) => 1, SU2(1//2) => 6, SU2(1) => 8])
+  g2 = gradedrange([SU2(1//2) => 5, SU2(1) => 6, SU2(3//2) => 1])
+  ft = zeros(FusionTensorAxes((g1,), (dual(g2),)))
+
+  u1 = random_unitary(6, 5)
+  v1 = random_unitary(5, 5)
+  s1 = LinearAlgebra.diagm(1:5)
+  u2 = random_unitary(8, 6)
+  v2 = random_unitary(6, 6)
+  s2 = LinearAlgebra.diagm(6:11)
+  data_matrix(ft)[Block(2, 1)] .= u1 * s1 * v1
+  data_matrix(ft)[Block(3, 2)] .= u2 * s2 * v2
+
+  u, s, v = svd(ft, (1, 2), (1,), (2,))
+  utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc=truncrank(5))
+  @test check_svd(ft, utrunc, strunc, vtrunc)
+  @test size(strunc) == tuplemortar(((3,), (3,)))
+  @test space_isequal(axes(strunc, 1), gradedrange([SU2(1) => 1]))
+
+  utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc=truncrank(6))
+  @test check_svd(ft, utrunc, strunc, vtrunc)
+  @test size(strunc) == tuplemortar(((6,), (6,)))
+  @test space_isequal(axes(strunc, 1), gradedrange([SU2(1) => 2]))
+  ft_trunc = utrunc * strunc * vtrunc
+  # TBD check norm(ft-ft_trunc)?
+
+  # trunc above total number of values
+  utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc=truncrank(500))
+  @test check_full_svd(ft, utrunc, strunc, vtrunc)
 end

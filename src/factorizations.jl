@@ -71,7 +71,6 @@ function MatrixAlgebraKit.truncate!(
   (U, S, Vᴴ)::Tuple{FusionTensor,FusionTensor,FusionTensor},
   strategy::TruncationStrategy,
 )
-  @show "HI MatrixAlgebraKit.truncate!"
   m = data_matrix(S)
   g0 = codomain_axis(S)
   vals = mapreduce(vcat, Iterators.flatten(eachblockstoredindex(m))) do b
@@ -93,6 +92,7 @@ function MatrixAlgebraKit.truncate!(
   Vᴴtrunc = similar(U, ((g,), domain_axes(Vᴴ)))
 
   # TBD: think in terms of block or of sectors?
+  # TODO use Dict{Sector,Vector{Int}} + dedicated function
   for (i, b) in enumerate(kept_blocks)
     r = Base.oneto(kept_blockwise[i])
     bu = findfirstblock_sector(codomain_axis(U), kept_sectors[i])
@@ -107,6 +107,8 @@ end
 
 # ==========================================================================================
 
+# TBD allow complex for truncated_eig?
+# TBD replace with (val, Sector) and use length(sector) internally?
 struct Multiplet{T<:Real,B,I}
   val::T
   blockval::B
