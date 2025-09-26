@@ -23,7 +23,6 @@ function TensorAlgebra.output_axes(
   biperm1::AbstractBlockPermutation{2},
   a2::FusionTensor,
   biperm2::AbstractBlockPermutation{2},
-  α::Number=one(Bool),
 )
   axes_codomain, axes_contracted = blocks(axes(a1)[biperm1])
   axes_contracted2, axes_domain = blocks(axes(a2)[biperm2])
@@ -74,7 +73,7 @@ function TensorAlgebra.permuteblockeddims!(
 end
 
 # TODO define custom broadcast rules
-function TensorAlgebra.unmatricize_add!(a_dest::FusionTensor, a_dest_mat, invbiperm, α, β)
+function TensorAlgebra.unmatricizeadd!(a_dest::FusionTensor, a_dest_mat, invbiperm, α, β)
   a12 = unmatricize(a_dest_mat, axes(a_dest), invbiperm)
   data_matrix(a_dest) .= α .* data_matrix(a12) .+ β .* data_matrix(a_dest)
   return a_dest
