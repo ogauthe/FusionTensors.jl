@@ -2,7 +2,7 @@ using TensorAlgebra: TensorAlgebra, MatrixAlgebra
 using MatrixAlgebraKit:
   MatrixAlgebraKit,
   TruncationStrategy,
-  TruncationKeepSorted,
+  TruncationByOrder,
   default_svd_algorithm,
   findtruncated,
   svd_compact!,
@@ -129,7 +129,7 @@ GradedArrays.quantum_dimension(m::Multiplet) = m.quantum_dimension
 LinearAlgebra.norm(m::Multiplet, p::Real=2) = abs(real(m)) * (quantum_dimension(m)^(1 / p))
 
 function MatrixAlgebra.findtruncated(
-  vals::AbstractVector{<:Multiplet}, strategy::TruncationKeepSorted
+  vals::AbstractVector{<:Multiplet}, strategy::TruncationByOrder
 )
   Base.require_one_based_indexing(vals)
   issorted(vals; rev=true) || error("Not sorted.")
