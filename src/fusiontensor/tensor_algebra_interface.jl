@@ -14,7 +14,40 @@ using TensorAlgebra:
   Matricize,
   blockedperm,
   genperm,
+  matricize,
   unmatricize
+
+const MATRIX_FUNCTIONS = [
+  :exp,
+  :cis,
+  :log,
+  :sqrt,
+  :cbrt,
+  :cos,
+  :sin,
+  :tan,
+  :csc,
+  :sec,
+  :cot,
+  :cosh,
+  :sinh,
+  :tanh,
+  :csch,
+  :sech,
+  :coth,
+  :acos,
+  :asin,
+  :atan,
+  :acsc,
+  :asec,
+  :acot,
+  :acosh,
+  :asinh,
+  :atanh,
+  :acsch,
+  :asech,
+  :acoth,
+]
 
 function TensorAlgebra.output_axes(
   ::typeof(contract),
@@ -69,4 +102,18 @@ function TensorAlgebra.unmatricizeadd!(a_dest::FusionTensor, a_dest_mat, invbipe
   a12 = unmatricize(a_dest_mat, axes(a_dest), invbiperm)
   data_matrix(a_dest) .= α .* data_matrix(a12) .+ β .* data_matrix(a_dest)
   return a_dest
+end
+
+for f in MATRIX_FUNCTIONS
+  @eval begin
+    function TensorAlgebra.$f(
+      a::FusionTensor, biperm::AbstractBlockPermutation{2}; kwargs...
+    )
+      a_mat = matricize(a, biperm)
+      permuted_axes = axes(a)[biperm]
+      checkspaces_dual(codomain(permuted_axes), domain(permuted_axes))
+      fa_mat = set_data_matrix(a_mat, Base.$f(data_matrix(a_mat); kwargs...))
+      return unmatricize(fa_mat, permuted_axes)
+    end
+  end
 end

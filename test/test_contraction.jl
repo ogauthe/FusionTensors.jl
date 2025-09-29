@@ -1,10 +1,12 @@
 using LinearAlgebra: mul!
-using Test: @test, @testset, @test_broken
+using Test: @test, @testset, @test_broken, @test_throws
 
 using BlockSparseArrays: BlockSparseArray
-using FusionTensors: FusionTensor, FusionTensorAxes, domain_axes, codomain_axes
+using FusionTensors:
+  FusionTensors, FusionTensor, FusionTensorAxes, domain_axes, codomain_axes, to_fusiontensor
 using GradedArrays: SU2, U1, dual, gradedrange
-using TensorAlgebra: contract, matricize, permmortar, tuplemortar, unmatricize, unmatricize!
+using TensorAlgebra:
+  TensorAlgebra, contract, matricize, permmortar, tuplemortar, unmatricize, unmatricize!
 
 include("setup.jl")
 
@@ -52,6 +54,25 @@ end
   @test ft1 ≈ ft2
 end
 
+@testset "Matrix functions" begin
+  sds22 = [
+    0.25 0.0 0.0 0.0
+    0.0 -0.25 0.5 0.0
+    0.0 0.5 -0.25 0.0
+    0.0 0.0 0.0 0.25
+  ]
+  t = reshape(sds22, (2, 2, 2, 2))
+  g2 = gradedrange([SU2(1//2) => 1])
+  ft = to_fusiontensor(t, (g2, g2), (dual(g2), dual(g2)))
+  for f in setdiff(FusionTensors.MATRIX_FUNCTIONS, [:acoth, :cbrt])
+    t2 = reshape((@eval Base.$f)(sds22), (2, 2, 2, 2))
+    ft2 = to_fusiontensor(t2, (g2, g2), (dual(g2), dual(g2)))
+    @test (@eval TensorAlgebra.$f)(ft, (1, 2, 3, 4), (1, 2), (3, 4)) ≈ ft2
+  end
+  @test_throws ArgumentError TensorAlgebra.exp(ft, (1, 2, 3, 4), (1, 2, 3), (4,))
+  @test_throws ArgumentError TensorAlgebra.exp(ft, (1, 2, 3, 4), (1, 3), (2, 4))
+end
+
 @testset "contraction" begin
   g1 = gradedrange([U1(0) => 1, U1(1) => 2, U1(2) => 3])
   g2 = gradedrange([U1(0) => 2, U1(1) => 2, U1(3) => 1])
@@ -78,7 +99,7 @@ end
   @test m3 ≈ 2m1 * m2
 end
 
-@testset "TensorAlgebra interface" begin
+@testset "TensorAlgebra.contract interface" begin
   g1 = gradedrange([U1(0) => 1, U1(1) => 2, U1(2) => 3])
   g2 = gradedrange([U1(0) => 2, U1(1) => 2, U1(3) => 1])
   g3 = gradedrange([U1(-1) => 1, U1(0) => 2, U1(1) => 1])
