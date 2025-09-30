@@ -5,18 +5,14 @@ using LinearAlgebra: normalize!
 
 # =============================  TEBD algorithm   ==========================================
 
-function tebd_step(left, right, gate, Dmax, cutoff, rejected_weight, absorb)
+function tebd_step(left, right, gate, trunc, absorb)
   # phys-left-right
-  @tensor t[d11, L, d22, R] := left[d1, L, M] * right[d2, M, R] * gate[d1, d2, d11, d22]
-  dL, DL, _ = size(left)
-  dR, _, DR = size(right)
-  u0, s0, v0 = svd(reshape(t, (dL * DL, dR * DR)))
-  cut = find_cut(s0, Dmax, cutoff, rejected_weight)
-  u1, s1, v1 = truncate(u0, s0, v0, cut)
-  normalize!(s1)
-  new_left_mat, new_right_mat = absorb_weights(u1, s1, v1, absorb)
-  new_left = reshape(new_left_mat, dL, DL, cut)
-  new_right = permutedims(reshape(new_right_mat, (cut, dR, DR)), (2, 1, 3))
+  leftright = contract((1, 3, 2, 4), left, (1, 2, -1), right, (2, 3, -1))
+  t = contract((1, 3, 2, 4), leftright, (1, 2, 3, 4), gate, (1, 2, 3, 4))
+  u, s, v = svd(t, (1, 2, 3, 4), (1, 2), (3, 4), trunc)
+  normalize!(s)
+  new_left, new_right_mat = absorb_weights(u, s, v, absorb)
+  new_right = permutedims(new_right_mat, (2, 1), (3,))
   return new_left, new_right
 end
 
