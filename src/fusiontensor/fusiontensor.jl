@@ -142,6 +142,7 @@ const FusionMatrix{T, Axes, Mat, Mapping} = FusionTensor{
 
 data_matrix(ft::FusionTensor) = ft.data_matrix
 trees_block_mapping(ft::FusionTensor) = ft.trees_block_mapping
+fusiontrees(ft::FusionTensor) = keys(trees_block_mapping(ft))
 
 # ====================================  Constructors  ======================================
 
