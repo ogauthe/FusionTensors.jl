@@ -66,7 +66,7 @@ function MatrixAlgebraKit.svd_compact!(
     return U, S, Vᴴ
 end
 
-function MatrixAlgebraKit.truncate!(
+function MatrixAlgebraKit.truncate(
         ::typeof(svd_trunc!),
         (U, S, Vᴴ)::Tuple{FusionTensor, FusionTensor, FusionTensor},
         strategy::TruncationStrategy,
@@ -102,7 +102,8 @@ function MatrixAlgebraKit.truncate!(
         data_matrix(Vᴴtrunc)[Block(i), bv] .= data_matrix(Vᴴ)[bv, b][r, :]
     end
 
-    return Utrunc, Strunc, Vᴴtrunc
+    ind = 0   # TODO
+    return (Utrunc, Strunc, Vᴴtrunc), ind
 end
 
 # ==========================================================================================

@@ -7,7 +7,6 @@ using FusionTensors:
 using GradedArrays:
     SU2, U1, checkspaces, checkspaces_dual, dual, flip, gradedrange, isdual, space_isequal
 using TensorAlgebra: svd, tuplemortar
-using MatrixAlgebraKit: truncrank
 
 include("setup.jl")
 
@@ -94,21 +93,19 @@ end
     g2 = gradedrange([U1(1) => 8, U1(2) => 4])
     ft = randn(elt, FusionTensorAxes((g1,), (dual(g2),)))
 
-    trunc = truncrank(5)
-
     u, s, v = svd(ft, (1, 2), (1,), (2,))
-    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc)
+    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = (; maxrank = 5))
     @test check_svd(ft, utrunc, strunc, vtrunc)
     @test size(strunc) == tuplemortar(((5,), (5,)))
     ft_trunc = utrunc * strunc * vtrunc
     # TBD check norm(ft-ft_trunc)?
 
     # trunc above total number of values
-    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = truncrank(100))
+    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = (; maxrank = 100))
     @test check_full_svd(ft, utrunc, strunc, vtrunc)
 
     # keep 0 values
-    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = truncrank(0))
+    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = (; maxrank = 0))
     # TBD fix isdual(length = 0) or not worth it?
     #@test check_svd(ft, utrunc, strunc, vtrunc)
     @test size(strunc) == tuplemortar(((0,), (0,)))
@@ -118,7 +115,7 @@ end
     g2 = gradedrange([U1(1) => 8, U1(2) => 4, U1(4) => 3])
     ft = randn(FusionTensorAxes((g1,), (dual(g2),)))
     u, s, v = svd(ft, (1, 2), (1,), (2,))
-    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc)
+    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = (; maxrank = 5))
     @test check_svd(ft, utrunc, strunc, vtrunc)
     @test size(strunc) == tuplemortar(((5,), (5,)))
     ft_trunc = utrunc * strunc * vtrunc
@@ -142,12 +139,12 @@ random_unitary(m, n) = Matrix(LinearAlgebra.qr(randn(m, n)).Q)
     data_matrix(ft)[Block(3, 2)] .= u2 * s2 * v2
 
     u, s, v = svd(ft, (1, 2), (1,), (2,))
-    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = truncrank(5))
+    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = (; maxrank = 5))
     @test check_svd(ft, utrunc, strunc, vtrunc)
     @test size(strunc) == tuplemortar(((3,), (3,)))
     @test space_isequal(axes(strunc, 1), gradedrange([SU2(1) => 1]))
 
-    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = truncrank(6))
+    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = (; maxrank = 6))
     @test check_svd(ft, utrunc, strunc, vtrunc)
     @test size(strunc) == tuplemortar(((6,), (6,)))
     @test space_isequal(axes(strunc, 1), gradedrange([SU2(1) => 2]))
@@ -155,6 +152,6 @@ random_unitary(m, n) = Matrix(LinearAlgebra.qr(randn(m, n)).Q)
     # TBD check norm(ft-ft_trunc)?
 
     # trunc above total number of values
-    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = truncrank(500))
+    utrunc, strunc, vtrunc = svd(ft, (1, 2), (1,), (2,); trunc = (; maxrank = 500))
     @test check_full_svd(ft, utrunc, strunc, vtrunc)
 end
