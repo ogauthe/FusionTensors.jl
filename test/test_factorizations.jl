@@ -1,6 +1,7 @@
 using Test: @test, @testset
 using TestExtras: @constinferred
-using LinearAlgebra: LinearAlgebra, isdiag
+using LinearAlgebra: LinearAlgebra, isdiag, norm
+using BlockArrays: Block
 using BlockSparseArrays: BlockSparseArray, eachstoredblock
 using FusionTensors:
     FusionTensor, FusionTensorAxes, domain_axes, codomain_axes, to_fusiontensor
